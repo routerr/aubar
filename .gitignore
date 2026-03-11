@@ -1,0 +1,84 @@
+# OS noise
+.DS_Store
+
+# Editor state
+.idea/
+.vscode/
+.cursor/
+*.swp
+*.swo
+*~
+
+# Local AI/tool state
+.claude/
+.gemini/
+.envrc
+.env
+.env.local
+!.env.example
+!.env.template
+
+# Build outputs
+/aubar
+/quota
+/gemini-quota
+/bin/
+/build/
+/dist/
+*.test
+*.out
+
+# Test and profiling artifacts
+coverage.out
+coverage.txt
+coverage.html
+*.coverprofile
+*.prof
+.gocache/
+.gocache2/
+.gocache-buildtmp/
+.gocache-docs/
+.gocache-live/
+/tmp/
+/tmp-*/
+$tmpdir/
+*.tmp
+*.temp
+*.pid
+*.lock
+
+# Aubar runtime caches
+*.cache
+status.txt
+snapshot.json
+
+# Logs and local debug output
+*.log
+*.log.*
+gemini_out.json
+
+# Backups and patch leftovers
+*.bak
+*.orig
+*.rej
+
+# Credentials and keys
+*.key
+*.pem
+oauth_creds.json
+captured_quota.json
+secrets/
+credentials/
+.id_rsa*
+.id_ed25519*
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Local archives
+*.cpu
+*.mem
+*.trace
+*.tar.gz
+*.zip
