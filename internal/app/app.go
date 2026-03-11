@@ -571,11 +571,20 @@ func mergeMetadataCopy(base map[string]any, extras map[string]any) map[string]an
 func readCachedCollection(cfg config.Settings) (domain.Collection, error) {
 	var lastErr error
 	for _, path := range jsonCachePaths(cfg) {
-		raw, err := os.ReadFile(path)
+		f, err := os.Open(path)
 		if err != nil {
 			lastErr = err
 			continue
 		}
+		defer f.Close()
+
+		// Limit read to 2MB to prevent memory exhaustion (GO-HTTPCLIENT-001)
+		raw, err := io.ReadAll(io.LimitReader(f, 2*1024*1024))
+		if err != nil {
+			lastErr = err
+			continue
+		}
+
 		var col domain.Collection
 		if err := json.Unmarshal(raw, &col); err != nil {
 			lastErr = err

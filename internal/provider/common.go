@@ -72,7 +72,8 @@ func readJSONBody[T any](resp *http.Response) (T, error) {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
 		return v, fmt.Errorf("http %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
 	}
-	b, err := io.ReadAll(resp.Body)
+	// Limit read to 2MB to prevent memory exhaustion (GO-HTTPCLIENT-001)
+	b, err := io.ReadAll(io.LimitReader(resp.Body, 2*1024*1024))
 	if err != nil {
 		return v, err
 	}

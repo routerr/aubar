@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"math"
 	"os"
@@ -210,7 +211,14 @@ func parseCodexWindow(v any) (codexWindow, bool) {
 }
 
 func readCodexAuthMode(path string) string {
-	raw, err := os.ReadFile(path)
+	f, err := os.Open(path)
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+
+	// Limit read to 1MB (GO-HTTPCLIENT-001)
+	raw, err := io.ReadAll(io.LimitReader(f, 1024*1024))
 	if err != nil {
 		return ""
 	}

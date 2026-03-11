@@ -85,3 +85,28 @@ func TestLoadOAuthClientConfigFromEnvironment(t *testing.T) {
 		t.Fatalf("unexpected client config: %+v", cfg)
 	}
 }
+
+func TestLoadOAuthClientConfigDiscoversLocalGeminiCLIConstants(t *testing.T) {
+	t.Setenv(geminiOAuthClientIDEnvVar, "")
+	t.Setenv(geminiOAuthClientSecretEnvVar, "")
+
+	sourcePath := filepath.Join(t.TempDir(), "oauth2.js")
+	if err := os.WriteFile(sourcePath, []byte(`
+const OAUTH_CLIENT_ID = 'fixture-installed-client-id.apps.googleusercontent.com';
+const OAUTH_CLIENT_SECRET = 'fixture-installed-client-secret';
+`), 0o600); err != nil {
+		t.Fatalf("write oauth source: %v", err)
+	}
+	t.Setenv(geminiOAuthSourcePathEnvVar, sourcePath)
+
+	cfg, err := loadOAuthClientConfig()
+	if err != nil {
+		t.Fatalf("discover client config: %v", err)
+	}
+	if cfg.ClientID != "fixture-installed-client-id.apps.googleusercontent.com" {
+		t.Fatalf("unexpected discovered client id: %+v", cfg)
+	}
+	if cfg.ClientSecret != "fixture-installed-client-secret" {
+		t.Fatalf("unexpected discovered client secret: %+v", cfg)
+	}
+}

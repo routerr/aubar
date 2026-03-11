@@ -229,10 +229,18 @@ func defaultCapturedQuotaPath() (string, error) {
 }
 
 func readCapturedQuotaEntry(path string) (capturedQuotaEntry, error) {
-	raw, err := os.ReadFile(path)
+	f, err := os.Open(path)
 	if err != nil {
 		return capturedQuotaEntry{}, err
 	}
+	defer f.Close()
+
+	// Limit to 5MB for the captured quota file (GO-HTTPCLIENT-001)
+	raw, err := io.ReadAll(io.LimitReader(f, 5*1024*1024))
+	if err != nil {
+		return capturedQuotaEntry{}, err
+	}
+
 	var payload map[string]capturedQuotaEntry
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return capturedQuotaEntry{}, fmt.Errorf("failed to parse captured quota file: %w", err)

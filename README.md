@@ -28,7 +28,7 @@ Standalone `aubar once` / `aubar show` output looks like:
 
 - `❀`: OpenAI / Codex. First number is 5-hour remaining, second is 7-day remaining.
 - `✽`: Claude. Same two-window remaining layout when quota is available.
-- ``: Gemini. Left side is the selected Pro-chain model, right side is the selected Flash / Flash-lite chain model, both rendered as `<major>-<remaining%>`.
+- ``: Gemini. Left side is the selected Pro-chain model, right side is the selected Flash / Flash-lite chain model, both rendered as `<major>-<remaining%>`.
 
 When `tmux.use_tmux_color_format` is enabled, Aubar writes tmux color tokens directly into `status.txt`:
 

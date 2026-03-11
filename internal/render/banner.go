@@ -189,7 +189,7 @@ func providerBrainIcon(s domain.ProviderSnapshot, tmuxColors bool) string {
 	case domain.ProviderClaude:
 		icon = "✽"
 	case domain.ProviderGemini:
-		icon = ""
+		icon = ""
 	}
 	if !tmuxColors {
 		return icon

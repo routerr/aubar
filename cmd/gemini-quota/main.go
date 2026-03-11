@@ -5,10 +5,13 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -68,12 +71,16 @@ const (
 	geminiOAuthCredsPathEnvVar    = "GEMINI_OAUTH_CREDS_PATH"
 	geminiOAuthClientIDEnvVar     = "GEMINI_OAUTH_CLIENT_ID"
 	geminiOAuthClientSecretEnvVar = "GEMINI_OAUTH_CLIENT_SECRET"
+	geminiOAuthSourcePathEnvVar   = "GEMINI_OAUTH_SOURCE_PATH"
 )
 
 type oauthClientConfig struct {
 	ClientID     string
 	ClientSecret string
 }
+
+var oauthClientIDPattern = regexp.MustCompile(`const OAUTH_CLIENT_ID = '([^']+)'`)
+var oauthClientSecretPattern = regexp.MustCompile(`const OAUTH_CLIENT_SECRET = '([^']+)'`)
 
 type httpStatusError struct {
 	StatusCode int
@@ -84,7 +91,12 @@ func (e httpStatusError) Error() string {
 }
 
 func fetchCloudCodeQuota(accessToken string) (*QuotaResponse, error) {
-	reqBody := []byte(`{"project":"totemic-carrier-5jts2"}`) // Works with this dummy project or empty object
+	projectID := strings.TrimSpace(os.Getenv("GEMINI_QUOTA_PROJECT_ID"))
+	if projectID == "" {
+		projectID = "totemic-carrier-5jts2" // Fallback to the public dummy project
+	}
+
+	reqBody, _ := json.Marshal(map[string]string{"project": projectID})
 
 	req, err := http.NewRequest("POST", "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota", bytes.NewBuffer(reqBody))
 	if err != nil {
@@ -108,7 +120,8 @@ func fetchCloudCodeQuota(accessToken string) (*QuotaResponse, error) {
 	}
 
 	var quota QuotaResponse
-	if err := json.NewDecoder(resp.Body).Decode(&quota); err != nil {
+	// Limit read to 1MB to prevent memory exhaustion (GO-HTTPCLIENT-001)
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 1024*1024)).Decode(&quota); err != nil {
 		return nil, err
 	}
 
@@ -221,12 +234,100 @@ func refreshAccessToken(creds oauthCreds, now time.Time) (oauthCreds, error) {
 func loadOAuthClientConfig() (oauthClientConfig, error) {
 	clientID := strings.TrimSpace(os.Getenv(geminiOAuthClientIDEnvVar))
 	clientSecret := strings.TrimSpace(os.Getenv(geminiOAuthClientSecretEnvVar))
-	if clientID == "" || clientSecret == "" {
-		return oauthClientConfig{}, fmt.Errorf("%s and %s must be set to refresh Gemini OAuth tokens at runtime", geminiOAuthClientIDEnvVar, geminiOAuthClientSecretEnvVar)
+	if clientID != "" && clientSecret != "" {
+		return oauthClientConfig{
+			ClientID:     clientID,
+			ClientSecret: clientSecret,
+		}, nil
+	}
+	if discovered, err := discoverOAuthClientConfig(); err == nil {
+		return discovered, nil
+	}
+	return oauthClientConfig{}, fmt.Errorf("%s and %s must be set, or a local Gemini CLI OAuth source must be discoverable", geminiOAuthClientIDEnvVar, geminiOAuthClientSecretEnvVar)
+}
+
+func discoverOAuthClientConfig() (oauthClientConfig, error) {
+	for _, candidate := range geminiOAuthSourceCandidates() {
+		cfg, err := loadOAuthClientConfigFromFile(candidate)
+		if err == nil {
+			return cfg, nil
+		}
+	}
+	return oauthClientConfig{}, fmt.Errorf("no local Gemini CLI OAuth source found")
+}
+
+func geminiOAuthSourceCandidates() []string {
+	seen := map[string]struct{}{}
+	candidates := []string{}
+	add := func(path string) {
+		path = strings.TrimSpace(path)
+		if path == "" {
+			return
+		}
+		if _, ok := seen[path]; ok {
+			return
+		}
+		seen[path] = struct{}{}
+		candidates = append(candidates, path)
+	}
+
+	if override := strings.TrimSpace(os.Getenv(geminiOAuthSourcePathEnvVar)); override != "" {
+		add(override)
+		return candidates
+	}
+
+	if home, err := os.UserHomeDir(); err == nil {
+		add(filepath.Join(home, "node_modules", "@google", "gemini-cli-core", "dist", "src", "code_assist", "oauth2.js"))
+		if matches, err := filepath.Glob(filepath.Join(home, ".nvm", "versions", "node", "*", "lib", "node_modules", "@google", "gemini-cli-core", "dist", "src", "code_assist", "oauth2.js")); err == nil {
+			for _, match := range matches {
+				add(match)
+			}
+		}
+	}
+
+	if geminiPath, err := exec.LookPath("gemini"); err == nil {
+		if resolved, err := filepath.EvalSymlinks(geminiPath); err == nil {
+			for _, path := range geminiOAuthSourceCandidatesFromGeminiBinary(resolved) {
+				add(path)
+			}
+		}
+	}
+
+	return candidates
+}
+
+func geminiOAuthSourceCandidatesFromGeminiBinary(geminiPath string) []string {
+	root := filepath.Clean(geminiPath)
+	candidates := []string{}
+	for i := 0; i < 6; i++ {
+		candidates = append(candidates,
+			filepath.Join(root, "..", "@google", "gemini-cli-core", "dist", "src", "code_assist", "oauth2.js"),
+			filepath.Join(root, "..", "gemini-cli-core", "dist", "src", "code_assist", "oauth2.js"),
+			filepath.Join(root, "node_modules", "@google", "gemini-cli-core", "dist", "src", "code_assist", "oauth2.js"),
+		)
+		parent := filepath.Dir(root)
+		if parent == root {
+			break
+		}
+		root = parent
+	}
+	return candidates
+}
+
+func loadOAuthClientConfigFromFile(path string) (oauthClientConfig, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return oauthClientConfig{}, err
+	}
+	content := string(raw)
+	clientIDMatch := oauthClientIDPattern.FindStringSubmatch(content)
+	clientSecretMatch := oauthClientSecretPattern.FindStringSubmatch(content)
+	if len(clientIDMatch) < 2 || len(clientSecretMatch) < 2 {
+		return oauthClientConfig{}, fmt.Errorf("oauth constants not found in %s", path)
 	}
 	return oauthClientConfig{
-		ClientID:     clientID,
-		ClientSecret: clientSecret,
+		ClientID:     strings.TrimSpace(clientIDMatch[1]),
+		ClientSecret: strings.TrimSpace(clientSecretMatch[1]),
 	}, nil
 }
 
