@@ -19,7 +19,7 @@ import (
 
 	"github.com/raychang/ai-usage-bar/internal/cache"
 	"github.com/raychang/ai-usage-bar/internal/config"
-	"github.com/raychang/ai-usage-bar/internal/credentials"
+	"github.com/raychang/ai-usage-bar/internal/auth"
 	"github.com/raychang/ai-usage-bar/internal/diagnose"
 	"github.com/raychang/ai-usage-bar/internal/doctor"
 	"github.com/raychang/ai-usage-bar/internal/domain"
@@ -40,7 +40,7 @@ var detachedStarter = (*App).spawnDetached
 var processSignaler = signalProcess
 var patternStopper = stopByPattern
 var processChecker = isProcessRunning
-var credentialValidator = credentials.ValidateCredential
+var credentialValidator = auth.ValidateCredential
 var keySetter = keyringx.Set
 
 type runOptions struct {
@@ -878,7 +878,7 @@ func stopUpdater() (bool, *int, error) {
 	return true, nil, nil
 }
 
-func helpLines(help credentials.Help) []string {
+func helpLines(help auth.Help) []string {
 	lines := []string{}
 	if help.GetKeyURL != "" {
 		lines = append(lines, "Get key: "+help.GetKeyURL)

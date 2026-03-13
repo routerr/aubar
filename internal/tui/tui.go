@@ -10,7 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/raychang/ai-usage-bar/internal/config"
-	"github.com/raychang/ai-usage-bar/internal/credentials"
+	"github.com/raychang/ai-usage-bar/internal/auth"
 	"github.com/raychang/ai-usage-bar/internal/keyringx"
 )
 
@@ -56,7 +56,7 @@ type model struct {
 	authChoice     map[string]string
 	pendingSecrets map[string]string
 	status         string
-	validation     credentials.Result
+	validation     auth.Result
 	completed      bool
 	aborted        bool
 }
@@ -274,7 +274,7 @@ func (m model) submitKey() (tea.Model, tea.Cmd) {
 		m.status = "credential cannot be empty"
 		return m, nil
 	}
-	result := credentials.ValidateCredential(context.Background(), currentProvider(m.providerIdx), secret)
+	result := auth.ValidateCredential(context.Background(), currentProvider(m.providerIdx), secret)
 	m.validation = result
 	m.inputMode = false
 	m.input.Blur()
@@ -582,7 +582,7 @@ func (m model) helpLines() []string {
 }
 
 func providerHelp(provider string) []string {
-	help := credentials.ProviderHelp(provider)
+	help := auth.ProviderHelp(provider)
 	lines := []string{}
 	if help.GetKeyURL != "" {
 		lines = append(lines, "Get key: "+help.GetKeyURL)

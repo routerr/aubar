@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/raychang/ai-usage-bar/internal/config"
-	"github.com/raychang/ai-usage-bar/internal/credentials"
+	"github.com/raychang/ai-usage-bar/internal/auth"
 	"github.com/raychang/ai-usage-bar/internal/domain"
 )
 
@@ -86,11 +86,11 @@ func TestShowUsesCachedSnapshot(t *testing.T) {
 func TestKeySetRejectsInvalidCredential(t *testing.T) {
 	prevValidator := credentialValidator
 	prevSetter := keySetter
-	credentialValidator = func(_ context.Context, provider, key string) credentials.Result {
-		return credentials.Result{
+	credentialValidator = func(_ context.Context, provider, key string) auth.Result {
+		return auth.Result{
 			Provider: provider,
 			Message:  "bad key",
-			Help: credentials.Help{
+			Help: auth.Help{
 				GetKeyURL:    "https://example.com/key",
 				Instructions: []string{"Create the right key"},
 			},
@@ -121,8 +121,8 @@ func TestKeySetStoresValidatedCredential(t *testing.T) {
 	prevValidator := credentialValidator
 	prevSetter := keySetter
 	called := false
-	credentialValidator = func(_ context.Context, provider, key string) credentials.Result {
-		return credentials.Result{
+	credentialValidator = func(_ context.Context, provider, key string) auth.Result {
+		return auth.Result{
 			Provider: provider,
 			OK:       true,
 			Warning:  "works but quota is N/A",

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/raychang/ai-usage-bar/internal/credentials"
+	"github.com/raychang/ai-usage-bar/internal/auth"
 	"github.com/raychang/ai-usage-bar/internal/domain"
 )
 
@@ -18,7 +18,7 @@ func Collection(col domain.Collection) []string {
 
 func forSnapshot(snap domain.ProviderSnapshot) []string {
 	provider := string(snap.Provider)
-	help := credentials.ProviderHelp(provider)
+	help := auth.ProviderHelp(provider)
 	reason := strings.ToLower(strings.TrimSpace(snap.Reason))
 	lines := []string{}
 
@@ -61,7 +61,7 @@ func forSnapshot(snap domain.ProviderSnapshot) []string {
 	return lines
 }
 
-func helpLines(help credentials.Help) []string {
+func helpLines(help auth.Help) []string {
 	lines := []string{}
 	if help.GetKeyURL != "" {
 		lines = append(lines, fmt.Sprintf("%s: get/create the key at %s", label(help.Provider), help.GetKeyURL))
