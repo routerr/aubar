@@ -783,7 +783,14 @@ func statusFileAge(path string) (string, bool) {
 func findPID() (int, string, error) {
 	var lastErr error
 	for _, path := range pidFilePaths() {
-		raw, err := os.ReadFile(path)
+		// Limit read to 1KB - PID files should be very small (GO-HTTPCLIENT-001)
+		f, err := os.Open(path)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		raw, err := io.ReadAll(io.LimitReader(f, 1024))
+		f.Close()
 		if err != nil {
 			lastErr = err
 			continue

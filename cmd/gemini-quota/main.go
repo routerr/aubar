@@ -208,7 +208,8 @@ func refreshAccessToken(creds oauthCreds, now time.Time) (oauthCreds, error) {
 	}
 
 	var refreshed oauthRefreshResponse
-	if err := json.NewDecoder(resp.Body).Decode(&refreshed); err != nil {
+	// Limit read to 64KB - OAuth refresh responses should be small (GO-HTTPCLIENT-001)
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 64*1024)).Decode(&refreshed); err != nil {
 		return creds, err
 	}
 	if strings.TrimSpace(refreshed.AccessToken) == "" {
