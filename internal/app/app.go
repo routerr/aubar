@@ -250,7 +250,7 @@ func (a *App) cmdShow(args []string) int {
 		fmt.Fprintf(a.Stderr, "read cached data: %v\n", err)
 		return 1
 	}
-	fmt.Fprintln(a.Stdout, render.RenderLine(col, false))
+	fmt.Fprintln(a.Stdout, render.RenderLineWithoutTimestamp(col, cfg.Tmux.UseTmuxColorFormat))
 	return 0
 }
 

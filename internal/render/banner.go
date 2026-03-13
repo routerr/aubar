@@ -46,8 +46,9 @@ func renderLine(col domain.Collection, tmuxColors bool, includeTimestamp bool) s
 	}
 	if includeTimestamp {
 		parts = append(parts, col.GeneratedAt.Format("15:04:05"))
+		return strings.Join(parts, " | ")
 	}
-	return strings.Join(parts, " | ")
+	return strings.Join(parts, " ")
 }
 
 func renderProvider(s domain.ProviderSnapshot, tmuxColors bool) string {
@@ -55,11 +56,11 @@ func renderProvider(s domain.ProviderSnapshot, tmuxColors bool) string {
 	name := providerNameColored(s, tmuxColors)
 	summary := providerSummary(s, tmuxColors)
 	if !providerConnected(s) {
+		if summary == "" {
+			return ""
+		}
 		if shouldShowDisconnectedProvider(s) {
-			if summary != "" {
-				return joinNonEmpty(brain, name, summary)
-			}
-			return joinNonEmpty(brain, name)
+			return joinNonEmpty(brain, name, summary)
 		}
 		return ""
 	}
@@ -307,8 +308,14 @@ func claudeCostSummary(s domain.ProviderSnapshot) string {
 	model, modelOK := metadataFloat(s.Metadata, "claude_model_cost_usd")
 	switch {
 	case totalOK && modelOK:
+		if total <= 0 && model <= 0 {
+			return ""
+		}
 		return fmt.Sprintf("%s %s", formatTrailingUSD(total), formatTrailingUSD(model))
 	case totalOK:
+		if total <= 0 {
+			return ""
+		}
 		return fmt.Sprintf("%s %s", formatTrailingUSD(total), formatTrailingUSD(total))
 	case s.UsageUnit == "usd" && s.UsageValue > 0:
 		return fmt.Sprintf("%s %s", formatTrailingUSD(s.UsageValue), formatTrailingUSD(s.UsageValue))

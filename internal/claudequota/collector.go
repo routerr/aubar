@@ -321,17 +321,53 @@ func cachedSubscriptionQuota(path string) (*SubscriptionQuota, error) {
 	return quota, nil
 }
 
+func oauthTokenFromCredentialsFile() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("cannot determine home directory: %w", err)
+	}
+	path := filepath.Join(home, ".claude", ".credentials.json")
+	f, err := os.Open(path)
+	if err != nil {
+		return "", fmt.Errorf("credentials file not found: %w", err)
+	}
+	defer f.Close()
+
+	raw, err := io.ReadAll(io.LimitReader(f, 5*1024*1024))
+	if err != nil {
+		return "", fmt.Errorf("failed to read credentials file: %w", err)
+	}
+	var creds keychainCreds
+	if err := json.Unmarshal(raw, &creds); err != nil {
+		return "", fmt.Errorf("failed to parse credentials file: %w", err)
+	}
+	if creds.ClaudeAiOauth.AccessToken == "" {
+		return "", fmt.Errorf("no OAuth access token in credentials file")
+	}
+	return creds.ClaudeAiOauth.AccessToken, nil
+}
+
 func resolveOAuthToken(capturedQuotaPath string) (string, error) {
+	// 1. macOS Keychain
 	token, err := oauthTokenFromKeychain()
 	if err == nil {
 		return token, nil
 	}
 	keychainErr := err
+
+	// 2. Claude Code credentials file (~/.claude/.credentials.json) — Linux/cross-platform
+	token, err = oauthTokenFromCredentialsFile()
+	if err == nil {
+		return token, nil
+	}
+	credsFileErr := err
+
+	// 3. Captured quota file (~/.claude/captured_quota.json)
 	token, err = oauthTokenFromCapturedQuota(capturedQuotaPath)
 	if err == nil {
 		return token, nil
 	}
-	return "", fmt.Errorf("%v; captured quota fallback failed: %w", keychainErr, err)
+	return "", fmt.Errorf("%v; %v; captured quota fallback failed: %w", keychainErr, credsFileErr, err)
 }
 
 // ── Subscription quota fetch ──────────────────────────────────────────────────

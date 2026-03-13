@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -22,12 +23,33 @@ type CLIExecutor interface {
 type DefaultCLIExecutor struct{}
 
 func (DefaultCLIExecutor) Run(ctx context.Context, command string, timeout time.Duration) (string, string, error) {
+	return runCLI(ctx, command, timeout, nil)
+}
+
+type KeyringCLIExecutor struct {
+	KeyringGet func(provider string) (string, error)
+}
+
+func (e KeyringCLIExecutor) Run(ctx context.Context, command string, timeout time.Duration) (string, string, error) {
+	var env []string
+	if strings.Contains(command, "quota") && e.KeyringGet != nil {
+		if token, err := e.KeyringGet("claude-oauth"); err == nil && token != "" {
+			env = append(env, "CLAUDE_OAUTH_TOKEN="+token)
+		}
+	}
+	return runCLI(ctx, command, timeout, env)
+}
+
+func runCLI(ctx context.Context, command string, timeout time.Duration, extraEnv []string) (string, string, error) {
 	if strings.TrimSpace(command) == "" {
 		return "", "", errors.New("empty command")
 	}
 	cctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	cmd := exec.CommandContext(cctx, "sh", "-lc", command)
+	if len(extraEnv) > 0 {
+		cmd.Env = append(os.Environ(), extraEnv...)
+	}
 	var out bytes.Buffer
 	var errOut bytes.Buffer
 	cmd.Stdout = &out
@@ -103,6 +125,19 @@ func errored(provider domain.ProviderID, source, reason string) domain.ProviderS
 	}
 }
 
+func usesRuntimeCollector(command string, defaults ...string) bool {
+	command = strings.TrimSpace(command)
+	if command == "" {
+		return true
+	}
+	for _, candidate := range defaults {
+		if command == strings.TrimSpace(candidate) {
+			return true
+		}
+	}
+	return false
+}
+
 func okSnapshot(provider domain.ProviderID, source, unit string, usage float64, limit *float64) domain.ProviderSnapshot {
 	s := domain.ProviderSnapshot{
 		Provider:   provider,
@@ -122,17 +157,4 @@ func okSnapshot(provider domain.ProviderID, source, unit string, usage float64, 
 		}
 	}
 	return s
-}
-
-func usesRuntimeCollector(command string, defaults ...string) bool {
-	command = strings.TrimSpace(command)
-	if command == "" {
-		return true
-	}
-	for _, candidate := range defaults {
-		if command == strings.TrimSpace(candidate) {
-			return true
-		}
-	}
-	return false
 }

@@ -1,6 +1,6 @@
 module github.com/routerr/aubar
 
-go 1.26.1
+go 1.25.7
 
 require (
 	github.com/charmbracelet/bubbles v1.0.0
