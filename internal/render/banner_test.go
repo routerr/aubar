@@ -67,6 +67,7 @@ func TestRenderLineOmitsProvidersWithoutUsableData(t *testing.T) {
 
 func TestRenderLineMarksExperimentalSessionSources(t *testing.T) {
 	p := 71.0
+	geminiIcon := providerBrainIcon(domain.ProviderSnapshot{Provider: domain.ProviderGemini}, false)
 	col := domain.Collection{
 		GeneratedAt: time.Date(2026, 3, 8, 3, 0, 0, 0, time.UTC),
 		Snapshots: []domain.ProviderSnapshot{
@@ -76,7 +77,7 @@ func TestRenderLineMarksExperimentalSessionSources(t *testing.T) {
 		},
 	}
 	line := RenderLine(col, false)
-	for _, needle := range []string{"❀ 71%", "✽ 0.10$ 0.10$", ""} {
+	for _, needle := range []string{"❀ 71%", "✽ 0.10$ 0.10$", geminiIcon} {
 		if !strings.Contains(line, needle) {
 			t.Fatalf("expected %s in %q", needle, line)
 		}
@@ -89,6 +90,7 @@ func TestRenderLineMarksExperimentalSessionSources(t *testing.T) {
 }
 
 func TestRenderLineShowsDisconnectedForUnknownUsageOnlyWhenNeeded(t *testing.T) {
+	geminiIcon := providerBrainIcon(domain.ProviderSnapshot{Provider: domain.ProviderGemini}, false)
 	col := domain.Collection{
 		GeneratedAt: time.Date(2026, 3, 8, 3, 0, 0, 0, time.UTC),
 		Snapshots: []domain.ProviderSnapshot{
@@ -97,7 +99,7 @@ func TestRenderLineShowsDisconnectedForUnknownUsageOnlyWhenNeeded(t *testing.T) 
 	}
 
 	line := RenderLineWithoutTimestamp(col, false)
-	if !strings.Contains(line, "") {
+	if !strings.Contains(line, geminiIcon) {
 		t.Fatalf("expected disconnected provider in %q", line)
 	}
 	for _, needle := range []string{"[", "]", "offline"} {
@@ -178,6 +180,7 @@ func TestRenderLineShowsClaudeQuotaWindowsInOpenAIStyle(t *testing.T) {
 
 func TestRenderLineShowsGeminiDualPercentLayout(t *testing.T) {
 	p := 85.0
+	geminiIcon := providerBrainIcon(domain.ProviderSnapshot{Provider: domain.ProviderGemini}, false)
 	col := domain.Collection{
 		GeneratedAt: time.Date(2026, 3, 8, 5, 0, 0, 0, time.UTC),
 		Snapshots: []domain.ProviderSnapshot{
@@ -197,13 +200,14 @@ func TestRenderLineShowsGeminiDualPercentLayout(t *testing.T) {
 	}
 
 	line := RenderLineWithoutTimestamp(col, false)
-	if !strings.Contains(line, " 3-85% 2-89%") {
+	if !strings.Contains(line, geminiIcon+" 3-85% 2-89%") {
 		t.Fatalf("expected gemini dual summary in %q", line)
 	}
 }
 
 func TestRenderLineShowsGeminiMajorTagsInTmuxColor(t *testing.T) {
 	p := 85.0
+	geminiIcon := providerBrainIcon(domain.ProviderSnapshot{Provider: domain.ProviderGemini, Status: domain.StatusOK, RemainingPercent: &p}, true)
 	col := domain.Collection{
 		GeneratedAt: time.Date(2026, 3, 8, 5, 0, 0, 0, time.UTC),
 		Snapshots: []domain.ProviderSnapshot{
@@ -224,7 +228,7 @@ func TestRenderLineShowsGeminiMajorTagsInTmuxColor(t *testing.T) {
 
 	line := RenderLineWithoutTimestamp(col, true)
 	for _, needle := range []string{
-		"#[fg=#cdd6f4,nobold]#[default]",
+		geminiIcon,
 		"#[fg=#9399b2,nobold]3-#[default]#[fg=#94e2d5,nobold]85#[default]#[fg=#a6adc8,nobold]%#[default]",
 		"#[fg=#9399b2,nobold]2-#[default]#[fg=#94e2d5,nobold]89#[default]#[fg=#a6adc8,nobold]%#[default]",
 	} {
@@ -236,6 +240,7 @@ func TestRenderLineShowsGeminiMajorTagsInTmuxColor(t *testing.T) {
 
 func TestRenderLineUsesTmuxColorForConnectedAndDisconnectedBrains(t *testing.T) {
 	p := 50.0
+	disconnectedGeminiIcon := providerBrainIcon(domain.ProviderSnapshot{Provider: domain.ProviderGemini, Status: domain.StatusDegraded}, true)
 	col := domain.Collection{
 		GeneratedAt: time.Date(2026, 3, 8, 5, 0, 0, 0, time.UTC),
 		Snapshots: []domain.ProviderSnapshot{
@@ -247,7 +252,7 @@ func TestRenderLineUsesTmuxColorForConnectedAndDisconnectedBrains(t *testing.T) 
 	line := RenderLineWithoutTimestamp(col, true)
 	for _, needle := range []string{
 		"#[fg=#cdd6f4,nobold]❀#[default] #[fg=#f9e2af,nobold]50#[default]#[fg=#a6adc8,nobold]%#[default]",
-		"#[fg=#45475a,nobold]#[default]",
+		disconnectedGeminiIcon,
 	} {
 		if !strings.Contains(line, needle) {
 			t.Fatalf("expected %s in %q", needle, line)
@@ -260,6 +265,7 @@ func TestRenderLineUsesTmuxColorForConnectedAndDisconnectedBrains(t *testing.T) 
 
 func TestRenderLineShowsTimedOutProviderAsDisconnected(t *testing.T) {
 	p := 50.0
+	disconnectedGeminiIcon := providerBrainIcon(domain.ProviderSnapshot{Provider: domain.ProviderGemini, Status: domain.StatusError}, true)
 	col := domain.Collection{
 		GeneratedAt: time.Date(2026, 3, 8, 5, 0, 0, 0, time.UTC),
 		Snapshots: []domain.ProviderSnapshot{
@@ -271,7 +277,7 @@ func TestRenderLineShowsTimedOutProviderAsDisconnected(t *testing.T) {
 	line := RenderLineWithoutTimestamp(col, true)
 	for _, needle := range []string{
 		"#[fg=#cdd6f4,nobold]❀#[default] #[fg=#f9e2af,nobold]50#[default]#[fg=#a6adc8,nobold]%#[default]",
-		"#[fg=#45475a,nobold]#[default]",
+		disconnectedGeminiIcon,
 	} {
 		if !strings.Contains(line, needle) {
 			t.Fatalf("expected %s in %q", needle, line)
