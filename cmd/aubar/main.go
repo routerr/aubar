@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/raychang/ai-usage-bar/internal/app"
+	"github.com/routerr/aubar/internal/app"
 )
 
 func main() {

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/raychang/ai-usage-bar/internal/auth"
-	"github.com/raychang/ai-usage-bar/internal/domain"
+	"github.com/routerr/aubar/internal/auth"
+	"github.com/routerr/aubar/internal/domain"
 )
 
 func Collection(col domain.Collection) []string {
@@ -52,7 +52,7 @@ func forSnapshot(snap domain.ProviderSnapshot) []string {
 		return lines
 	}
 	if strings.Contains(reason, "no such file or directory") || strings.Contains(reason, "command not found") || strings.Contains(reason, "exit status 127") {
-		lines = append(lines, fmt.Sprintf("%s: CLI execution failed. Ensure the provider CLI or helper (like codex, quota, or gemini-quota) is installed and in your PATH.", label(provider)))
+		lines = append(lines, fmt.Sprintf("%s: CLI execution failed. Ensure the provider CLI or any explicitly configured override command is installed and in your PATH.", label(provider)))
 		return lines
 	}
 	if reason != "" {

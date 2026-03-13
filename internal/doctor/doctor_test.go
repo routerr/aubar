@@ -3,7 +3,7 @@ package doctor
 import (
 	"testing"
 
-	"github.com/raychang/ai-usage-bar/internal/config"
+	"github.com/routerr/aubar/internal/config"
 )
 
 func TestRunIncludesBasicChecks(t *testing.T) {

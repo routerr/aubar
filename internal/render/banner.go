@@ -5,21 +5,21 @@ import (
 	"strings"
 	"time"
 
-	"github.com/raychang/ai-usage-bar/internal/domain"
+	"github.com/routerr/aubar/internal/domain"
 )
 
 const (
-	brainIcon       = ""
-	colorAvailable  = "#cdd6f4"
+	brainIcon        = ""
+	colorAvailable   = "#cdd6f4"
 	colorUnavailable = "#45475a"
-	colorHigh       = "#94e2d5"
-	colorGreen      = "#a6e3a1"
-	colorYellow     = "#f9e2af"
-	colorPeach      = "#fab387"
-	colorMaroon     = "#eba0ac"
-	colorPink       = "#f38ba8"
-	colorTag        = "#9399b2"
-	colorText       = "#bac2de"
+	colorHigh        = "#94e2d5"
+	colorGreen       = "#a6e3a1"
+	colorYellow      = "#f9e2af"
+	colorPeach       = "#fab387"
+	colorMaroon      = "#eba0ac"
+	colorPink        = "#f38ba8"
+	colorTag         = "#9399b2"
+	colorText        = "#bac2de"
 	colorPercentSign = "#a6adc8"
 )
 

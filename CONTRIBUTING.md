@@ -8,24 +8,23 @@ Thank you for your interest in contributing to AI Usage Bar! This document provi
 
 - Go 1.26 or later
 - Git
-- Make (optional, for using Makefile commands)
 - Docker (optional, for containerized development)
 
 ### Development Setup
 
 ```bash
 # Clone the repository
-git clone https://github.com/raychang/ai-usage-bar.git
-cd ai-usage-bar
+git clone https://github.com/routerr/aubar.git
+cd aubar
 
 # Install dependencies
 go mod download
 
 # Run tests to verify setup
-make test
+GOCACHE="$PWD/.gocache-buildtmp" go test ./...
 
 # Build the project
-make build
+./build.sh
 
 # Enable the repo's pre-commit hooks
 git config core.hooksPath .githooks
@@ -42,11 +41,11 @@ This repo keeps real credentials outside git. Use clearly fake placeholders such
 ## 🏗️ Project Structure
 
 ```
-ai-usage-bar/
+aubar/
 ├── cmd/                    # Main entry points for CLI tools
 │   ├── aubar/             # Main application
-│   ├── quota/             # Claude quota helper
-│   └── gemini-quota/      # Gemini quota helper
+│   ├── quota/             # Optional Claude quota debug wrapper
+│   └── gemini-quota/      # Optional Gemini quota debug wrapper
 ├── internal/              # Private application code
 │   ├── app/              # CLI application logic
 │   ├── cache/            # Cache management
@@ -72,16 +71,16 @@ ai-usage-bar/
 
 ```bash
 # Run all tests
-make test
+GOCACHE="$PWD/.gocache-buildtmp" go test ./...
 
 # Run tests with coverage
-make test-coverage
+GOCACHE="$PWD/.gocache-buildtmp" go test -cover ./...
 
 # Run specific package tests
-go test ./internal/provider/
+GOCACHE="$PWD/.gocache-buildtmp" go test ./internal/provider/
 
 # Run tests with verbose output
-go test -v ./...
+GOCACHE="$PWD/.gocache-buildtmp" go test -v ./...
 ```
 
 ### Writing Tests
@@ -144,14 +143,6 @@ func TestMyProvider_Success(t *testing.T) {
 - Use interfaces for dependency injection
 
 ### Linting
-
-```bash
-# Run linter
-make lint
-
-# Format code
-make fmt
-```
 
 We use the following tools:
 - `gofmt` for code formatting
@@ -318,10 +309,10 @@ We are committed to providing a welcoming and inclusive environment. Please:
 
 ## 📧 Contact
 
-- **Maintainers**: @raychang
-- **Repository**: https://github.com/raychang/ai-usage-bar
-- **Issues**: https://github.com/raychang/ai-usage-bar/issues
-- **Discussions**: https://github.com/raychang/ai-usage-bar/discussions
+- **Maintainers**: @routerr
+- **Repository**: https://github.com/routerr/aubar
+- **Issues**: https://github.com/routerr/aubar/issues
+- **Discussions**: https://github.com/routerr/aubar/discussions
 
 ## 🙏 Acknowledgments
 

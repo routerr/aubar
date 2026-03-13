@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/raychang/ai-usage-bar/internal/domain"
+	"github.com/routerr/aubar/internal/domain"
 )
 
 type Provider interface {

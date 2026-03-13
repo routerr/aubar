@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/raychang/ai-usage-bar/internal/config"
-	"github.com/raychang/ai-usage-bar/internal/keyringx"
+	"github.com/routerr/aubar/internal/config"
+	"github.com/routerr/aubar/internal/keyringx"
 )
 
 type Check struct {

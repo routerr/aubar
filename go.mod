@@ -1,4 +1,4 @@
-module github.com/raychang/ai-usage-bar
+module github.com/routerr/aubar
 
 go 1.26.1
 

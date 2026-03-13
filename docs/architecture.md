@@ -43,8 +43,8 @@ graph TB
 
 **Components**:
 - `cmd/aubar/`: Main application CLI
-- `cmd/quota/`: Claude quota helper binary
-- `cmd/gemini-quota/`: Gemini quota helper binary
+- `cmd/quota/`: Optional Claude quota debug wrapper around the internal collector
+- `cmd/gemini-quota/`: Optional Gemini quota debug wrapper around the internal collector
 
 **Design Principles**:
 - Minimal logic - delegate to application layer

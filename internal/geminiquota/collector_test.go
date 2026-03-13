@@ -1,15 +1,20 @@
-package main
+package geminiquota
 
 import (
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 )
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (fn roundTripFunc) Do(req *http.Request) (*http.Response, error) {
+	return fn(req)
+}
 
 func TestResolveAccessTokenRefreshesExpiredCreds(t *testing.T) {
 	dir := t.TempDir()
@@ -25,23 +30,21 @@ func TestResolveAccessTokenRefreshesExpiredCreds(t *testing.T) {
 	}
 
 	var receivedBody string
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	client := roundTripFunc(func(r *http.Request) (*http.Response, error) {
 		body, _ := io.ReadAll(r.Body)
 		receivedBody = string(body)
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+			Body: io.NopCloser(strings.NewReader(`{
   "access_token": "fixture-fresh-credential",
   "expires_in": 3600,
   "token_type": "Bearer"
-}`))
-	}))
-	defer server.Close()
+}`)),
+		}, nil
+	})
 
-	prevEndpoint := oauthTokenEndpoint
-	oauthTokenEndpoint = server.URL
-	defer func() { oauthTokenEndpoint = prevEndpoint }()
-
-	token, creds, err := resolveAccessToken("", credsPath, time.Unix(2000, 0))
+	token, creds, err := resolveAccessToken(client, "", credsPath, time.Unix(2000, 0))
 	if err != nil {
 		t.Fatalf("resolve token: %v", err)
 	}

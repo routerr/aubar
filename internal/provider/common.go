@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/raychang/ai-usage-bar/internal/domain"
+	"github.com/routerr/aubar/internal/domain"
 )
 
 type CLIExecutor interface {
@@ -122,4 +122,17 @@ func okSnapshot(provider domain.ProviderID, source, unit string, usage float64, 
 		}
 	}
 	return s
+}
+
+func usesRuntimeCollector(command string, defaults ...string) bool {
+	command = strings.TrimSpace(command)
+	if command == "" {
+		return true
+	}
+	for _, candidate := range defaults {
+		if command == strings.TrimSpace(candidate) {
+			return true
+		}
+	}
+	return false
 }

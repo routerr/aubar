@@ -2,7 +2,7 @@
 
 [![Go Version](https://img.shields.io/badge/Go-1.26+-blue.svg)](https://golang.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen.svg)](https://github.com/raychang/ai-usage-bar/actions)
+[![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen.svg)](https://github.com/routerr/aubar/actions)
 
 `aubar` is a modern, high-performance CLI tool for monitoring AI service usage and quotas across multiple providers. Built with Go 1.26+, it provides real-time usage visualization with tmux integration and extensible provider architecture.
 
@@ -13,7 +13,7 @@
 - **Tmux Integration**: Native tmux status bar support with color formatting
 - **Extensible Architecture**: Plugin-based provider system for easy expansion
 - **Robust Error Handling**: Graceful degradation and comprehensive diagnostics
-- **Cross-Platform**: Native support for macOS and Linux
+- **Cross-Platform Builds**: Native build scripts for macOS, Linux, and Windows shells
 - **Modern CLI**: Rich terminal UI with Bubble Tea framework
 
 ## 📊 Current Output
@@ -56,26 +56,30 @@ It also maintains a PID file for the detached updater process.
 
 ```bash
 # Clone the repository
-git clone https://github.com/raychang/ai-usage-bar.git
-cd ai-usage-bar
+git clone https://github.com/routerr/aubar.git
+cd aubar
 
-# Build all components
-go build -o aubar ./cmd/aubar
-go build -o quota ./cmd/quota
-go build -o gemini-quota ./cmd/gemini-quota
+# Build all native binaries for your current shell and OS
+./build.sh
 
 # Initialize configuration
-./aubar setup
+./dist/native/aubar setup
 
 # Start monitoring
-./aubar run
+./dist/native/aubar run
 ```
 
-### One-Liner Setup
+On Windows PowerShell:
 
-```bash
-curl -sSL https://raw.githubusercontent.com/raychang/ai-usage-bar/main/install.sh | bash
+```powershell
+git clone https://github.com/routerr/aubar.git
+Set-Location aubar
+.\build.ps1
+.\dist\native\aubar.exe setup
+.\dist\native\aubar.exe run
 ```
+
+`build.sh` is written to run cleanly under macOS `zsh`, Linux `bash`, Git Bash, Cygwin, and MSYS2 shell families including `MINGW*`, `UCRT64`, `CLANG64`, and `CLANGARM64`.
 
 ## ⚙️ Commands
 
@@ -208,23 +212,24 @@ Use clearly fake placeholders like `set-in-external-env` or `fixture-example-val
 
 ### Claude
 
-- The Claude provider runs `./quota` first, then falls back to a sibling `quota` binary next to the Aubar executable.
-- `quota` returns:
+- Aubar now collects Claude quota and local usage in-process.
+- The optional `quota` binary is a thin debug wrapper around the same internal collector.
+- The collector returns:
   - `subscription_quota`
   - `last_5_hours`
   - `last_7_days`
   - optional rate-limit probe data
-- For live subscription quota, `quota` first tries the macOS Keychain Claude OAuth token.
+- For live subscription quota, Aubar first tries the macOS Keychain Claude OAuth token.
 - If Keychain lookup or live quota fetch fails, it can fall back to `~/.claude/captured_quota.json`.
-- The helper can reuse cached captured `/api/oauth/usage` data when live Anthropic quota fetches are unavailable.
+- The collector can reuse cached captured `/api/oauth/usage` data when live Anthropic quota fetches are unavailable.
 - When `subscription_quota` is present, Aubar renders Claude exactly like OpenAI: `✽ <5h> <7d>`.
 - If quota is missing but usage data is still available, Claude can degrade to a cost summary instead of disappearing entirely.
 
-Helpful helper flags:
+Optional debug wrapper:
 
 ```bash
-./quota -no-probe
-./quota -no-quota
+./dist/native/quota -no-probe
+./dist/native/quota -no-quota
 ```
 
 The captured quota file path can be overridden with:
@@ -235,8 +240,9 @@ CLAUDE_CAPTURED_QUOTA_PATH=/custom/path/captured_quota.json
 
 ### Gemini
 
-- The Gemini provider runs `./gemini-quota` first, then a sibling `gemini-quota` binary next to Aubar.
-- `gemini-quota` reads `~/.gemini/oauth_creds.json`, refreshes the access token when needed, and fetches live Cloud Code quota.
+- Aubar now fetches Gemini quota in-process.
+- The optional `gemini-quota` binary is a thin debug wrapper around the same internal collector.
+- The collector reads `~/.gemini/oauth_creds.json`, refreshes the access token when needed, and fetches live Cloud Code quota.
 - The OAuth creds path can be overridden with `GEMINI_OAUTH_CREDS_PATH`.
 - OAuth refresh client config is loaded at runtime from `GEMINI_OAUTH_CLIENT_ID` and `GEMINI_OAUTH_CLIENT_SECRET`.
 - Aubar maps model buckets into two display chains:
@@ -299,14 +305,16 @@ set -g status-interval 5
 ### Troubleshooting Tmux
 
 ```bash
+BIN_DIR=./dist/native
+
 # Check cache file contents
 cat ~/Library/Caches/ai-usage-bar/status.txt
 
 # Test manually
-./aubar once
+"$BIN_DIR"/aubar once
 
 # Restart services
-./aubar restart
+"$BIN_DIR"/aubar restart
 ```
 
 ## 🐛 Troubleshooting
@@ -316,25 +324,29 @@ cat ~/Library/Caches/ai-usage-bar/status.txt
 #### Provider Not Showing
 
 ```bash
+BIN_DIR=./dist/native
+
 # Check individual providers
-./aubar once --json | jq '.snapshots[]'
+"$BIN_DIR"/aubar once --json | jq '.snapshots[]'
 
 # Run diagnostics
-./aubar doctor --json
+"$BIN_DIR"/aubar doctor --json
 
-# Check helper binaries
-./quota -no-probe
-./gemini-quota
+# Optional wrapper debugging
+"$BIN_DIR"/quota -no-probe
+"$BIN_DIR"/gemini-quota
 ```
 
 #### Tmux Status Not Updating
 
 ```bash
+BIN_DIR=./dist/native
+
 # Restart the updater
-./aubar restart
+"$BIN_DIR"/aubar restart
 
 # Check cache freshness
-./aubar status --json
+"$BIN_DIR"/aubar status --json
 
 # Verify tmux configuration
 tmux source-file ~/.tmux.conf
@@ -343,14 +355,16 @@ tmux source-file ~/.tmux.conf
 #### Authentication Issues
 
 ```bash
+BIN_DIR=./dist/native
+
 # Check runtime env placement
 cat ~/Library/Application\\ Support/ai-usage-bar/.env
 
-# Check Gemini helper directly
-./gemini-quota
+# Optional Gemini wrapper debug
+"$BIN_DIR"/gemini-quota
 
-# Check Claude helper directly
-./quota -no-probe
+# Optional Claude wrapper debug
+"$BIN_DIR"/quota -no-probe
 ```
 
 - If Gemini OAuth refresh fails, verify `GEMINI_OAUTH_CLIENT_ID`, `GEMINI_OAUTH_CLIENT_SECRET`, and `GEMINI_OAUTH_CREDS_PATH`.
@@ -362,7 +376,7 @@ Enable verbose logging:
 
 ```bash
 export AUBAR_DEBUG=true
-./aubar once --json
+./dist/native/aubar once --json
 ```
 
 ## 🏗️ Architecture

@@ -9,9 +9,9 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/raychang/ai-usage-bar/internal/config"
-	"github.com/raychang/ai-usage-bar/internal/auth"
-	"github.com/raychang/ai-usage-bar/internal/keyringx"
+	"github.com/routerr/aubar/internal/auth"
+	"github.com/routerr/aubar/internal/config"
+	"github.com/routerr/aubar/internal/keyringx"
 )
 
 var ErrAborted = errors.New("aborted")
@@ -483,7 +483,7 @@ func (m model) options() []option {
 	case screenAuthChoice:
 		if currentProvider(m.providerIdx) == "gemini" {
 			return []option{
-				{Label: "Gemini CLI (Recommended)", Description: "Use local ./gemini-quota tool without requiring a new API key"},
+				{Label: "Gemini CLI (Recommended)", Description: "Use Aubar's built-in Gemini collector with your local Gemini CLI OAuth credentials"},
 				{Label: "API key", Description: "Use an explicit Gemini API key"},
 				{Label: "Skip", Description: "Leave Gemini disabled for now"},
 			}
@@ -497,7 +497,7 @@ func (m model) options() []option {
 		}
 		if currentProvider(m.providerIdx) == "claude" {
 			return []option{
-				{Label: "Claude Code CLI (Recommended)", Description: "Use local ./quota tool without requiring an Admin API key"},
+				{Label: "Claude Code CLI (Recommended)", Description: "Use Aubar's built-in Claude collector with local Claude Code credentials"},
 				{Label: "API key", Description: "For Anthropic Usage & Cost Admin API access"},
 				{Label: "Skip", Description: "Leave this provider disabled for now"},
 			}
@@ -512,7 +512,7 @@ func (m model) options() []option {
 			{Label: "Use API key instead", Description: "Continue with the supported v1 path"},
 			{Label: "Skip Gemini", Description: "Leave Gemini disabled for now"},
 		}
-		case screenKeyResult:
+	case screenKeyResult:
 		if m.validation.OK {
 			return []option{
 				{Label: "Save and continue (Recommended)", Description: "Store this credential in keyring and move on"},
@@ -523,7 +523,7 @@ func (m model) options() []option {
 			{Label: "Retry key entry (Recommended)", Description: "Enter another credential"},
 			{Label: "Skip provider", Description: "Leave this provider disabled for now"},
 		}
-		case screenSourceOrder:
+	case screenSourceOrder:
 		return []option{
 			{Label: "CLI only (Recommended)", Description: "Use local CLI for quota/usage retrieval"},
 			{Label: "API only", Description: "Use official provider APIs"},

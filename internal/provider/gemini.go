@@ -4,31 +4,33 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"time"
 
-	"github.com/raychang/ai-usage-bar/internal/config"
-	"github.com/raychang/ai-usage-bar/internal/domain"
+	"github.com/routerr/aubar/internal/config"
+	"github.com/routerr/aubar/internal/domain"
+	"github.com/routerr/aubar/internal/geminiquota"
 )
 
 type GeminiProvider struct {
-	setting config.ProviderSetting
-	cli     CLIExecutor
-	client  HTTPClient
+	setting       config.ProviderSetting
+	cli           CLIExecutor
+	client        HTTPClient
+	collectOutput func(context.Context) (geminiquota.Output, error)
 }
 
 func NewGeminiProvider(setting config.ProviderSetting, cli CLIExecutor) *GeminiProvider {
 	if cli == nil {
 		cli = DefaultCLIExecutor{}
 	}
-	return &GeminiProvider{
+	p := &GeminiProvider{
 		setting: setting,
 		cli:     cli,
 		client:  defaultHTTPClient(time.Duration(setting.TimeoutSeconds) * time.Second),
 	}
+	p.collectOutput = p.defaultCollectOutput
+	return p
 }
 
 func (p *GeminiProvider) ID() domain.ProviderID { return domain.ProviderGemini }
@@ -55,13 +57,28 @@ func (p *GeminiProvider) FetchUsage(ctx context.Context) domain.ProviderSnapshot
 
 func (p *GeminiProvider) fetchCLI(ctx context.Context) (domain.ProviderSnapshot, error) {
 	cmd := strings.TrimSpace(p.setting.CLICommand)
-	commands := []string{}
-	switch cmd {
-	case "", "gemini usage --json":
-		commands = append(commands, geminiQuotaCLICommands()...)
-	default:
-		commands = append(commands, cmd)
+	if usesRuntimeCollector(cmd, "gemini usage --json") {
+		return p.fetchCollected(ctx)
 	}
+	return p.fetchCLICommand(ctx, cmd)
+}
+
+func (p *GeminiProvider) fetchCollected(ctx context.Context) (domain.ProviderSnapshot, error) {
+	out, err := p.collectOutput(ctx)
+	if err != nil {
+		return domain.ProviderSnapshot{}, err
+	}
+	if snap, ok := snapshotFromGeminiOutput(out, p.ID()); ok {
+		return snap, nil
+	}
+	if strings.TrimSpace(out.Note) != "" {
+		return domain.ProviderSnapshot{}, errors.New(strings.TrimSpace(out.Note))
+	}
+	return domain.ProviderSnapshot{}, errors.New("gemini quota unavailable")
+}
+
+func (p *GeminiProvider) fetchCLICommand(ctx context.Context, command string) (domain.ProviderSnapshot, error) {
+	commands := []string{command}
 
 	timeout := time.Duration(p.setting.TimeoutSeconds) * time.Second
 	if timeout <= 0 {
@@ -136,6 +153,13 @@ func (p *GeminiProvider) fetchCLI(ctx context.Context) (domain.ProviderSnapshot,
 		return domain.ProviderSnapshot{}, errors.New("cli command unavailable")
 	}
 	return domain.ProviderSnapshot{}, errors.New(strings.Join(errs, " | "))
+}
+
+func (p *GeminiProvider) defaultCollectOutput(_ context.Context) (geminiquota.Output, error) {
+	return geminiquota.Collect(context.Background(), geminiquota.Options{
+		Client: p.client,
+		Now:    time.Now(),
+	}), nil
 }
 
 type geminiCLIStats struct {
@@ -269,18 +293,6 @@ type geminiModelQuota struct {
 	RemainingPercent float64
 }
 
-func geminiQuotaCLICommands() []string {
-	commands := []string{"./gemini-quota"}
-	if exe, err := os.Executable(); err == nil {
-		sibling := filepath.Join(filepath.Dir(exe), "gemini-quota")
-		quoted := fmt.Sprintf("%q", sibling)
-		if quoted != commands[0] {
-			commands = append(commands, quoted)
-		}
-	}
-	return commands
-}
-
 func extractGeminiModelQuota(v any) ([]geminiModelQuota, bool) {
 	root, ok := v.(map[string]any)
 	if !ok {
@@ -311,6 +323,28 @@ func extractGeminiModelQuota(v any) ([]geminiModelQuota, bool) {
 		return nil, false
 	}
 	return models, true
+}
+
+func snapshotFromGeminiOutput(out geminiquota.Output, providerID domain.ProviderID) (domain.ProviderSnapshot, bool) {
+	if len(out.Models) == 0 {
+		return domain.ProviderSnapshot{}, false
+	}
+	models := make([]geminiModelQuota, 0, len(out.Models))
+	for _, model := range out.Models {
+		models = append(models, geminiModelQuota{
+			ModelID:          strings.ToLower(strings.TrimSpace(model.ModelID)),
+			RemainingPercent: clampGeminiPercent(model.RemainingPercent),
+		})
+	}
+	snap, err := geminiSnapshotFromModelQuota(providerID, models)
+	if err != nil {
+		return domain.ProviderSnapshot{}, false
+	}
+	if snap.Metadata == nil {
+		snap.Metadata = map[string]any{}
+	}
+	snap.Metadata["gemini_source"] = out.Source
+	return snap, true
 }
 
 func geminiSnapshotFromModelQuota(providerID domain.ProviderID, models []geminiModelQuota) (domain.ProviderSnapshot, error) {

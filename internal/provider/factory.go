@@ -3,8 +3,8 @@ package provider
 import (
 	"sort"
 
-	"github.com/raychang/ai-usage-bar/internal/config"
-	"github.com/raychang/ai-usage-bar/internal/domain"
+	"github.com/routerr/aubar/internal/config"
+	"github.com/routerr/aubar/internal/domain"
 )
 
 func BuildProviders(cfg config.Settings, cli CLIExecutor) []Provider {

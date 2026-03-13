@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/raychang/ai-usage-bar/internal/config"
-	"github.com/raychang/ai-usage-bar/internal/domain"
-	"github.com/raychang/ai-usage-bar/internal/provider"
+	"github.com/routerr/aubar/internal/config"
+	"github.com/routerr/aubar/internal/domain"
+	"github.com/routerr/aubar/internal/provider"
 )
 
 type Service struct {
