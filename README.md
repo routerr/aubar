@@ -21,12 +21,12 @@
 Standalone `aubar once` / `aubar show` output looks like:
 
 ```text
-❀ 98% 94% | ✽ 82% 85% |  3-78% 3-100% | 20:15:00
+❆ 98% 94% | ✽ 82% 85% |  3-78% 3-100% | 20:15:00
 ```
 
 `status.txt` contains the same provider layout without the trailing timestamp.
 
-- `❀`: OpenAI / Codex. First number is 5-hour remaining, second is 7-day remaining.
+- `❆`: OpenAI / Codex. First number is 5-hour remaining, second is 7-day remaining.
 - `✽`: Claude. Same two-window remaining layout when quota is available.
 - ``: Gemini. Left side is the selected Pro-chain model, right side is the selected Flash / Flash-lite chain model, both rendered as `<major>-<remaining%>`.
 
@@ -61,6 +61,11 @@ cd aubar
 
 # Build all native binaries for your current shell and OS
 ./build.sh
+
+# Advanced build options
+./build.sh --os linux --arch arm64
+./build.sh --all
+./build.sh --output-dir ./custom-dist
 
 # Initialize configuration
 ./dist/native/aubar setup
@@ -208,7 +213,7 @@ Use clearly fake placeholders like `set-in-external-env` or `fixture-example-val
 - The provider returns two quota windows through metadata:
   - primary window: 300 minutes
   - secondary window: 10080 minutes
-- The banner renders those as remaining percentages: `❀ <5h> <7d>`.
+- The banner renders those as remaining percentages: `❆ <5h> <7d>`.
 
 ### Claude
 

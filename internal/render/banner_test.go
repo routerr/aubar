@@ -18,7 +18,7 @@ func TestRenderLine(t *testing.T) {
 		},
 	}
 	line := RenderLine(col, false)
-	for _, needle := range []string{"❀ 74%", "✽ 0.10$ 0.08$"} {
+	for _, needle := range []string{"❆ 74%", "✽ 0.10$ 0.08$"} {
 		if !strings.Contains(line, needle) {
 			t.Fatalf("missing %s in %q", needle, line)
 		}
@@ -77,7 +77,7 @@ func TestRenderLineMarksExperimentalSessionSources(t *testing.T) {
 		},
 	}
 	line := RenderLine(col, false)
-	for _, needle := range []string{"❀ 71%", "✽ 0.10$ 0.10$", geminiIcon} {
+	for _, needle := range []string{"❆ 71%", "✽ 0.10$ 0.10$", geminiIcon} {
 		if !strings.Contains(line, needle) {
 			t.Fatalf("expected %s in %q", needle, line)
 		}
@@ -121,7 +121,7 @@ func TestRenderLineWithoutTimestampOmitsClock(t *testing.T) {
 	if strings.Contains(line, "03:00:00") {
 		t.Fatalf("expected no timestamp in %q", line)
 	}
-	if !strings.Contains(line, "❀ 71%") {
+	if !strings.Contains(line, "❆ 71%") {
 		t.Fatalf("expected provider content in %q", line)
 	}
 }
@@ -147,7 +147,7 @@ func TestRenderLineShowsCodexFiveHourWindowAlongsideActiveWindow(t *testing.T) {
 	}
 
 	line := RenderLineWithoutTimestamp(col, false)
-	if !strings.Contains(line, "❀ 84% 100%") {
+	if !strings.Contains(line, "❆ 84% 100%") {
 		t.Fatalf("expected codex summary in %q", line)
 	}
 }
@@ -251,7 +251,7 @@ func TestRenderLineUsesTmuxColorForConnectedAndDisconnectedBrains(t *testing.T) 
 
 	line := RenderLineWithoutTimestamp(col, true)
 	for _, needle := range []string{
-		"#[fg=#cdd6f4,nobold]❀#[default] #[fg=#f9e2af,nobold]50#[default]#[fg=#a6adc8,nobold]%#[default]",
+		"#[fg=#cdd6f4,nobold]❆#[default] #[fg=#f9e2af,nobold]50#[default]#[fg=#a6adc8,nobold]%#[default]",
 		disconnectedGeminiIcon,
 	} {
 		if !strings.Contains(line, needle) {
@@ -276,7 +276,7 @@ func TestRenderLineShowsTimedOutProviderAsDisconnected(t *testing.T) {
 
 	line := RenderLineWithoutTimestamp(col, true)
 	for _, needle := range []string{
-		"#[fg=#cdd6f4,nobold]❀#[default] #[fg=#f9e2af,nobold]50#[default]#[fg=#a6adc8,nobold]%#[default]",
+		"#[fg=#cdd6f4,nobold]❆#[default] #[fg=#f9e2af,nobold]50#[default]#[fg=#a6adc8,nobold]%#[default]",
 		disconnectedGeminiIcon,
 	} {
 		if !strings.Contains(line, needle) {
@@ -312,7 +312,7 @@ func TestRenderLineColorsPercentThresholdsInTmux(t *testing.T) {
 
 	line := RenderLineWithoutTimestamp(col, true)
 	for _, needle := range []string{
-		"#[fg=#cdd6f4,nobold]❀#[default] #[fg=#94e2d5,nobold]80#[default]#[fg=#a6adc8,nobold]%#[default]",
+		"#[fg=#cdd6f4,nobold]❆#[default] #[fg=#94e2d5,nobold]80#[default]#[fg=#a6adc8,nobold]%#[default]",
 		"#[fg=#cdd6f4,nobold]#[default] #[fg=#a6e3a1,nobold]70#[default]#[fg=#a6adc8,nobold]%#[default]",
 		"#[fg=#9399b2,nobold]3-#[default]#[fg=#fab387,nobold]40#[default]#[fg=#a6adc8,nobold]%#[default]",
 		"#[fg=#9399b2,nobold]2-#[default]#[fg=#eba0ac,nobold]20#[default]#[fg=#a6adc8,nobold]%#[default]",

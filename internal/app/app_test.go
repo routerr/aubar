@@ -44,6 +44,13 @@ func TestOnceWritesCaches(t *testing.T) {
 	if _, err := os.Stat(jsonFile); err != nil {
 		t.Fatalf("json cache file missing: %v", err)
 	}
+	raw, err := os.ReadFile(statusFile)
+	if err != nil {
+		t.Fatalf("read status file: %v", err)
+	}
+	if len(raw) == 0 || raw[len(raw)-1] != '\n' {
+		t.Fatalf("expected status file to end with newline, got %q", raw)
+	}
 	if strings.Contains(stdout.String(), "#[fg=") {
 		t.Fatalf("expected plain stdout, got %q", stdout.String())
 	}
@@ -78,7 +85,7 @@ func TestShowUsesCachedSnapshot(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("expected code 0, got %d stderr=%s", code, stderr.String())
 	}
-	if !strings.Contains(stdout.String(), "❀ 70%") || strings.Contains(stdout.String(), "#[fg=") {
+	if !strings.Contains(stdout.String(), "❆ 70%") || strings.Contains(stdout.String(), "#[fg=") {
 		t.Fatalf("unexpected stdout: %q", stdout.String())
 	}
 }

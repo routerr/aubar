@@ -482,12 +482,13 @@ func collectOnce(cfg config.Settings) domain.Collection {
 
 func writeCaches(cfg config.Settings, col domain.Collection) error {
 	line := render.RenderLineWithoutTimestamp(col, cfg.Tmux.UseTmuxColorFormat)
-	if err := cache.WriteAtomic(cfg.Tmux.StatusFile, []byte(line), 0o600); err != nil {
+	statusLine := []byte(line + "\n")
+	if err := cache.WriteAtomic(cfg.Tmux.StatusFile, statusLine, 0o600); err != nil {
 		if !errors.Is(err, os.ErrPermission) {
 			return err
 		}
 		fallbackDir := filepath.Join(os.TempDir(), config.AppName)
-		if e2 := cache.WriteAtomic(filepath.Join(fallbackDir, "status.txt"), []byte(line), 0o600); e2 != nil {
+		if e2 := cache.WriteAtomic(filepath.Join(fallbackDir, "status.txt"), statusLine, 0o600); e2 != nil {
 			return errors.Join(err, e2)
 		}
 	}
