@@ -215,7 +215,7 @@ func TestRenderLineShowsClaudeQuotaWindowsInOpenAIStyle(t *testing.T) {
 	}
 }
 
-func TestRenderLineShowsGeminiDualPercentLayout(t *testing.T) {
+func TestRenderLineShowsGeminiSingleModelLayout(t *testing.T) {
 	p := 85.0
 	geminiIcon := providerBrainIcon(domain.ProviderSnapshot{Provider: domain.ProviderGemini}, false)
 	col := domain.Collection{
@@ -227,22 +227,20 @@ func TestRenderLineShowsGeminiDualPercentLayout(t *testing.T) {
 				Source:           "cli",
 				RemainingPercent: &p,
 				Metadata: map[string]any{
-					"gemini_left_remaining_percent":  85.0,
-					"gemini_right_remaining_percent": 89.0,
-					"gemini_left_major_version_tag":  "3",
-					"gemini_right_major_version_tag": "2",
+					"gemini_remaining_percent": 85.0,
+					"gemini_model_tag":         "3.1p",
 				},
 			},
 		},
 	}
 
 	line := RenderLineWithoutTimestamp(col, false)
-	if !strings.Contains(line, geminiIcon+" 3-85% 2-89%") {
-		t.Fatalf("expected gemini dual summary in %q", line)
+	if !strings.Contains(line, geminiIcon+" 3.1p-85%") {
+		t.Fatalf("expected gemini single model summary in %q", line)
 	}
 }
 
-func TestRenderLineShowsGeminiMajorTagsInTmuxColor(t *testing.T) {
+func TestRenderLineShowsGeminiModelTagInTmuxColor(t *testing.T) {
 	p := 85.0
 	geminiIcon := providerBrainIcon(domain.ProviderSnapshot{Provider: domain.ProviderGemini, Status: domain.StatusOK, RemainingPercent: &p}, true)
 	col := domain.Collection{
@@ -254,10 +252,8 @@ func TestRenderLineShowsGeminiMajorTagsInTmuxColor(t *testing.T) {
 				Source:           "cli",
 				RemainingPercent: &p,
 				Metadata: map[string]any{
-					"gemini_left_remaining_percent":  85.0,
-					"gemini_right_remaining_percent": 89.0,
-					"gemini_left_major_version_tag":  "3",
-					"gemini_right_major_version_tag": "2",
+					"gemini_remaining_percent": 85.0,
+					"gemini_model_tag":         "3.1p",
 				},
 			},
 		},
@@ -266,8 +262,8 @@ func TestRenderLineShowsGeminiMajorTagsInTmuxColor(t *testing.T) {
 	line := RenderLineWithoutTimestamp(col, true)
 	for _, needle := range []string{
 		geminiIcon,
-		"#[fg=#9399b2,nobold]3-#[default]#[fg=#94e2d5,nobold]85#[default]#[fg=#a6adc8,nobold]%#[default]",
-		"#[fg=#9399b2,nobold]2-#[default]#[fg=#94e2d5,nobold]89#[default]#[fg=#a6adc8,nobold]%#[default]",
+		"#[fg=#9399b2,nobold]3.1p-#[default]",
+		"#[fg=#94e2d5,nobold]85#[default]#[fg=#a6adc8,nobold]%#[default]",
 	} {
 		if !strings.Contains(line, needle) {
 			t.Fatalf("expected %s in %q", needle, line)
@@ -326,8 +322,6 @@ func TestRenderLineColorsPercentThresholdsInTmux(t *testing.T) {
 	high := 80.0
 	green := 70.0
 	yellow := 50.0
-	peach := 40.0
-	maroon := 20.0
 	low := 10.0
 	zero := 0.0
 
@@ -337,10 +331,8 @@ func TestRenderLineColorsPercentThresholdsInTmux(t *testing.T) {
 			{Provider: domain.ProviderOpenAI, Status: domain.StatusOK, RemainingPercent: &high},
 			{Provider: "other-green", Status: domain.StatusOK, RemainingPercent: &green},
 			{Provider: domain.ProviderGemini, Status: domain.StatusOK, RemainingPercent: &yellow, Metadata: map[string]any{
-				"gemini_left_remaining_percent":  peach,
-				"gemini_right_remaining_percent": maroon,
-				"gemini_left_major_version_tag":  "3",
-				"gemini_right_major_version_tag": "2",
+				"gemini_remaining_percent": yellow,
+				"gemini_model_tag":         "3.1p",
 			}},
 			{Provider: "other-low", Status: domain.StatusOK, RemainingPercent: &low},
 			{Provider: "other-zero", Status: domain.StatusOK, RemainingPercent: &zero},
@@ -349,12 +341,11 @@ func TestRenderLineColorsPercentThresholdsInTmux(t *testing.T) {
 
 	line := RenderLineWithoutTimestamp(col, true)
 	for _, needle := range []string{
-		"#[fg=#cdd6f4,nobold]❆#[default] #[fg=#94e2d5,nobold]80#[default]#[fg=#a6adc8,nobold]%#[default]",
-		"#[fg=#cdd6f4,nobold]#[default] #[fg=#a6e3a1,nobold]70#[default]#[fg=#a6adc8,nobold]%#[default]",
-		"#[fg=#9399b2,nobold]3-#[default]#[fg=#fab387,nobold]40#[default]#[fg=#a6adc8,nobold]%#[default]",
-		"#[fg=#9399b2,nobold]2-#[default]#[fg=#eba0ac,nobold]20#[default]#[fg=#a6adc8,nobold]%#[default]",
-		"#[fg=#cdd6f4,nobold]#[default] #[fg=#f38ba8,nobold]10#[default]#[fg=#a6adc8,nobold]%#[default]",
-		"#[fg=#cdd6f4,nobold]#[default] #[fg=#45475a,nobold]0#[default]#[fg=#a6adc8,nobold]%#[default]",
+		"#[fg=#94e2d5,nobold]80#[default]#[fg=#a6adc8,nobold]%#[default]",
+		"#[fg=#a6e3a1,nobold]70#[default]#[fg=#a6adc8,nobold]%#[default]",
+		"#[fg=#9399b2,nobold]3.1p-#[default]#[fg=#f9e2af,nobold]50#[default]#[fg=#a6adc8,nobold]%#[default]",
+		"#[fg=#f38ba8,nobold]10#[default]#[fg=#a6adc8,nobold]%#[default]",
+		"#[fg=#45475a,nobold]0#[default]#[fg=#a6adc8,nobold]%#[default]",
 	} {
 		if !strings.Contains(line, needle) {
 			t.Fatalf("expected %s in %q", needle, line)

@@ -72,8 +72,8 @@ func renderProvider(s domain.ProviderSnapshot, tmuxColors bool) string {
 
 func providerSummary(s domain.ProviderSnapshot, tmuxColors bool) string {
 	if s.Provider == domain.ProviderGemini {
-		if pair, ok := geminiPairSummary(s, tmuxColors); ok {
-			return pair
+		if summary, ok := geminiSummary(s, tmuxColors); ok {
+			return summary
 		}
 	}
 	if primary, secondary, ok := quotaWindowSummary(s); ok {
@@ -104,43 +104,25 @@ func providerSummary(s domain.ProviderSnapshot, tmuxColors bool) string {
 	return text
 }
 
-func geminiPairSummary(s domain.ProviderSnapshot, tmuxColors bool) (string, bool) {
+func geminiSummary(s domain.ProviderSnapshot, tmuxColors bool) (string, bool) {
 	metadata := s.Metadata
 	if len(metadata) == 0 {
 		return "", false
 	}
-	left, leftOK := metadataFloat(metadata, "gemini_left_remaining_percent")
-	right, rightOK := metadataFloat(metadata, "gemini_right_remaining_percent")
-	if !leftOK && !rightOK {
+	remaining, ok := metadataFloat(metadata, "gemini_remaining_percent")
+	if !ok {
 		return "", false
 	}
-	if !leftOK {
-		left = right
+	tag, _ := metadata["gemini_model_tag"].(string)
+	if strings.TrimSpace(tag) == "" {
+		tag = "?"
 	}
-	if !rightOK {
-		right = left
-	}
-	leftTag, _ := metadata["gemini_left_major_version_tag"].(string)
-	rightTag, _ := metadata["gemini_right_major_version_tag"].(string)
-	if strings.TrimSpace(leftTag) == "" {
-		leftTag = "?"
-	}
-	if strings.TrimSpace(rightTag) == "" {
-		rightTag = "?"
-	}
-	leftPercent := formatPercent(left)
-	rightPercent := formatPercent(right)
+	percent := formatPercent(remaining)
 	if tmuxColors {
-		versionColor := "#[fg=" + colorTag + ",nobold]"
-		leftTag = versionColor + leftTag + "-#[default]"
-		rightTag = versionColor + rightTag + "-#[default]"
-		leftPercent = colorizePercent(left)
-		rightPercent = colorizePercent(right)
-	} else {
-		leftTag = leftTag + "-"
-		rightTag = rightTag + "-"
+		tagStr := "#[fg=" + colorTag + ",nobold]" + tag + "-#[default]"
+		return tagStr + colorizePercent(remaining), true
 	}
-	return fmt.Sprintf("%s%s %s%s", leftTag, leftPercent, rightTag, rightPercent), true
+	return tag + "-" + percent, true
 }
 
 func quotaWindowSummary(s domain.ProviderSnapshot) (primary providerWindow, secondary *providerWindow, ok bool) {

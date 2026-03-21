@@ -186,7 +186,7 @@ func (a *App) cmdRun(args []string) int {
 	defer stop()
 	r := runner.NewService(cfg, provider.BuildProviders(cfg, provider.DefaultCLIExecutor{}))
 	firstTick := true
-	r.Run(ctx, func(col domain.Collection) {
+	r.RunStreaming(ctx, func(col domain.Collection) {
 		col = stabilizeCollection(cfg, col)
 		if opts.JSON {
 			b, _ := json.Marshal(col)
@@ -201,6 +201,9 @@ func (a *App) cmdRun(args []string) int {
 			a.printDiagnostics(col)
 			firstTick = false
 		}
+	}, func(partial domain.Collection) {
+		partial = stabilizeCollection(cfg, partial)
+		_ = writeCaches(cfg, partial)
 	})
 	return 0
 }
@@ -333,7 +336,8 @@ func (a *App) cmdRestart(args []string) int {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 	r := runner.NewService(cfg, provider.BuildProviders(cfg, provider.DefaultCLIExecutor{}))
-	r.Run(ctx, func(col domain.Collection) {
+	r.RunStreaming(ctx, func(col domain.Collection) {
+		col = stabilizeCollection(cfg, col)
 		if opts.JSON {
 			b, _ := json.Marshal(col)
 			fmt.Fprintln(a.Stdout, string(b))
@@ -343,6 +347,9 @@ func (a *App) cmdRestart(args []string) int {
 		if err := writeCaches(cfg, col); err != nil {
 			fmt.Fprintf(a.Stderr, "cache write warning: %v\n", err)
 		}
+	}, func(partial domain.Collection) {
+		partial = stabilizeCollection(cfg, partial)
+		_ = writeCaches(cfg, partial)
 	})
 	return 0
 }
@@ -477,7 +484,10 @@ func loadConfig(path string) (config.Settings, error) {
 
 func collectOnce(cfg config.Settings) domain.Collection {
 	r := runner.NewService(cfg, provider.BuildProviders(cfg, provider.DefaultCLIExecutor{}))
-	return stabilizeCollection(cfg, r.Collect(context.Background()))
+	return stabilizeCollection(cfg, r.CollectStreaming(context.Background(), func(partial domain.Collection) {
+		partial = stabilizeCollection(cfg, partial)
+		_ = writeCaches(cfg, partial)
+	}))
 }
 
 func writeCaches(cfg config.Settings, col domain.Collection) error {

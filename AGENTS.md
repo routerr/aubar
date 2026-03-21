@@ -20,7 +20,7 @@ This document helps AI agents understand and work effectively in the Aubar codeb
 - `./dist/native/aubar setup` - Initialize configuration (launches TUI)
 - `./dist/native/aubar run` - Start background updater process
 - `./dist/native/aubar once` - Collect usage data once and print banner
-- `./dist/native/aubar show` - Display latest cached banner
+- `./dist/native/aubar show` - Collect usage data, update cache progressively, and display latest banner
 - `./dist/native/aubar status` - Check updater status
 - `./dist/native/aubar doctor` - Run diagnostics
 - `./dist/native/aubar tui` - Same as setup
@@ -121,11 +121,12 @@ This document helps AI agents understand and work effectively in the Aubar codeb
   - Uses OAuth flow with token refresh
   - Reads `~/.gemini/oauth_creds.json`
   - Requires `GEMINI_OAUTH_CLIENT_ID`/`SECRET` for refresh
-  - Maps models into Pro/Flash chains for display
+  - Maps models to a unified fallback chain (e.g. `3.1p`, `2.5f`) prioritizing Pro models
 
 ### Process Management
 - `aubar run` starts a detached background process by default
 - Use `--foreground` to run in current terminal
+- The updater progressively writes to the cache file as each provider finishes (streaming mode) so tmux updates without waiting for all providers
 - Background process logs to `aubar.log` in cache directory
 - PID file management with fallback to process pattern matching
 - Signal handling for graceful shutdown (SIGTERM)

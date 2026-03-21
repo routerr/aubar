@@ -348,45 +348,38 @@ func snapshotFromGeminiOutput(out geminiquota.Output, providerID domain.Provider
 }
 
 func geminiSnapshotFromModelQuota(providerID domain.ProviderID, models []geminiModelQuota) (domain.ProviderSnapshot, error) {
-	leftChain := []string{"gemini-3.1-pro", "gemini-3-pro", "gemini-2.5-pro", "gemini-1.5-pro"}
-	rightChain := []string{"gemini-3.1-flash", "gemini-3.1-flash-lite", "gemini-3-flash", "gemini-3-flash-lite", "gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-1.5-flash"}
-
-	left, leftID, leftMajor, leftOK := geminiSelectChainPercent(models, leftChain)
-	right, rightID, rightMajor, rightOK := geminiSelectChainPercent(models, rightChain)
-	if !leftOK && !rightOK {
-		return domain.ProviderSnapshot{}, fmt.Errorf("no matching pro/flash model quotas found")
+	// Unified fallback chain: prefer the highest-tier model that still has
+	// remaining quota, falling through from top to bottom.
+	chain := []string{
+		"gemini-3.1-pro",
+		"gemini-3.1-flash",
+		"gemini-3-pro",
+		"gemini-3-flash",
+		"gemini-2.5-pro",
+		"gemini-2.5-flash",
+		"gemini-1.5-pro",
+		"gemini-1.5-flash",
 	}
 
-	if !leftOK {
-		left = right
-		leftID = rightID
-		leftMajor = rightMajor
-	}
-	if !rightOK {
-		right = left
-		rightID = leftID
-		rightMajor = leftMajor
+	percent, matchedID, modelTag, ok := geminiSelectChainPercent(models, chain)
+	if !ok {
+		return domain.ProviderSnapshot{}, fmt.Errorf("no matching model quotas found")
 	}
 
 	limit := 100.0
-	used := 100 - clampGeminiPercent(minFloat(left, right))
+	used := 100 - clampGeminiPercent(percent)
 	s := okSnapshot(providerID, "cli", "percent", used, &limit)
 	s.Metadata = map[string]any{
-		"gemini_left_remaining_percent":   clampGeminiPercent(left),
-		"gemini_right_remaining_percent":  clampGeminiPercent(right),
-		"gemini_left_model_id":            leftID,
-		"gemini_right_model_id":           rightID,
-		"gemini_left_major_version_tag":   leftMajor,
-		"gemini_right_major_version_tag":  rightMajor,
-		"gemini_left_fallback_chain":      strings.Join(leftChain, ","),
-		"gemini_right_fallback_chain":     strings.Join(rightChain, ","),
-		"gemini_layout_format":            "G XX% YY%",
-		"gemini_layout_value_description": "left=pro chain right=flash chain",
+		"gemini_remaining_percent": clampGeminiPercent(percent),
+		"gemini_model_id":         matchedID,
+		"gemini_model_tag":        modelTag,
+		"gemini_fallback_chain":   strings.Join(chain, ","),
+		"gemini_layout_format":    "G <model> XX%",
 	}
 	return s, nil
 }
 
-func geminiSelectChainPercent(models []geminiModelQuota, chain []string) (percent float64, modelID string, majorTag string, ok bool) {
+func geminiSelectChainPercent(models []geminiModelQuota, chain []string) (percent float64, modelID string, modelTag string, ok bool) {
 	byModel := make(map[string]float64, len(models))
 	for _, m := range models {
 		byModel[m.ModelID] = m.RemainingPercent
@@ -394,7 +387,7 @@ func geminiSelectChainPercent(models []geminiModelQuota, chain []string) (percen
 	var exhaustedCandidateFound bool
 	var exhaustedPercent float64
 	var exhaustedModelID string
-	var exhaustedMajorTag string
+	var exhaustedModelTag string
 	for _, candidate := range chain {
 		p, matchedModelID, found := findGeminiRemaining(byModel, candidate)
 		if !found {
@@ -402,17 +395,17 @@ func geminiSelectChainPercent(models []geminiModelQuota, chain []string) (percen
 		}
 		remaining := clampGeminiPercent(p)
 		if remaining > 0 {
-			return remaining, matchedModelID, geminiMajorTag(candidate), true
+			return remaining, matchedModelID, geminiModelTag(candidate), true
 		}
 		if !exhaustedCandidateFound {
 			exhaustedCandidateFound = true
 			exhaustedPercent = remaining
 			exhaustedModelID = matchedModelID
-			exhaustedMajorTag = geminiMajorTag(candidate)
+			exhaustedModelTag = geminiModelTag(candidate)
 		}
 	}
 	if exhaustedCandidateFound {
-		return exhaustedPercent, exhaustedModelID, exhaustedMajorTag, true
+		return exhaustedPercent, exhaustedModelID, exhaustedModelTag, true
 	}
 	return 0, "", "", false
 }
@@ -441,23 +434,33 @@ func findGeminiRemaining(byModel map[string]float64, candidate string) (float64,
 	return byModel[candidates[0]], candidates[0], true
 }
 
-func geminiMajorTag(modelID string) string {
+// geminiModelTag returns a compact display tag like "3.1Pro" or "2.5Flash"
+// from a canonical model ID such as "gemini-3.1-pro".
+func geminiModelTag(modelID string) string {
 	id := strings.ToLower(strings.TrimSpace(modelID))
+	id = strings.TrimPrefix(id, "gemini-")
+
+	// Determine the model family (p=pro, f=flash).
+	family := ""
 	switch {
-	case strings.Contains(id, "gemini-3.") || strings.Contains(id, "gemini-3-"):
-		return "3"
-	case strings.Contains(id, "gemini-2.") || strings.Contains(id, "gemini-2-"):
-		return "2"
-	case strings.Contains(id, "gemini-1.") || strings.Contains(id, "gemini-1-"):
-		return "1"
-	default:
+	case strings.Contains(id, "pro"):
+		family = "p"
+	case strings.Contains(id, "flash"):
+		family = "f"
+	}
+
+	// Extract version number prefix (e.g. "3.1", "3", "2.5", "1.5").
+	version := ""
+	for _, v := range []string{"3.1", "3", "2.5", "2", "1.5", "1"} {
+		if strings.HasPrefix(id, v+"-") || strings.HasPrefix(id, v+"_") || id == v {
+			version = v
+			break
+		}
+	}
+
+	if version == "" && family == "" {
 		return "?"
 	}
+	return version + family
 }
 
-func minFloat(a, b float64) float64 {
-	if a < b {
-		return a
-	}
-	return b
-}

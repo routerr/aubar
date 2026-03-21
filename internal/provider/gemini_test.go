@@ -21,7 +21,7 @@ func (c *captureCLI) Run(_ context.Context, command string, _ time.Duration) (st
 	return c.stdout, c.stderr, c.err
 }
 
-func TestGeminiProviderParsesGeminiQuotaModelsWithFallbackChains(t *testing.T) {
+func TestGeminiProviderParsesGeminiQuotaModelsWithFallbackChain(t *testing.T) {
 	cli := &captureCLI{
 		stdout: `{
 			"source": "network_cloudcode_api",
@@ -48,19 +48,15 @@ func TestGeminiProviderParsesGeminiQuotaModelsWithFallbackChains(t *testing.T) {
 	if snap.Status != domain.StatusOK {
 		t.Fatalf("expected ok snapshot, got %+v", snap)
 	}
-	if snap.RemainingPercent == nil || *snap.RemainingPercent != 83.2 {
-		t.Fatalf("expected summary remaining percent from fallback chains, got %+v", snap)
+	// 3.1-pro is exhausted, 3.1-flash is exhausted, so fallback selects
+	// gemini-3-pro-preview (84.8%) as first available in the unified chain.
+	if snap.RemainingPercent == nil || *snap.RemainingPercent != 84.8 {
+		t.Fatalf("expected 84.8 remaining percent from fallback chain, got %+v", snap)
 	}
-	if got, ok := snap.Metadata["gemini_left_model_id"].(string); !ok || got != "gemini-3-pro-preview" {
-		t.Fatalf("expected left fallback model, got %+v", snap.Metadata)
+	if got, ok := snap.Metadata["gemini_model_id"].(string); !ok || got != "gemini-3-pro-preview" {
+		t.Fatalf("expected fallback model gemini-3-pro-preview, got %v", snap.Metadata["gemini_model_id"])
 	}
-	if got, ok := snap.Metadata["gemini_right_model_id"].(string); !ok || got != "gemini-3-flash-lite-preview" {
-		t.Fatalf("expected right fallback model, got %+v", snap.Metadata)
-	}
-	if got, ok := snap.Metadata["gemini_left_major_version_tag"].(string); !ok || got != "3" {
-		t.Fatalf("expected left major version tag, got %+v", snap.Metadata)
-	}
-	if got, ok := snap.Metadata["gemini_right_major_version_tag"].(string); !ok || got != "3" {
-		t.Fatalf("expected right major version tag, got %+v", snap.Metadata)
+	if got, ok := snap.Metadata["gemini_model_tag"].(string); !ok || got != "3p" {
+		t.Fatalf("expected model tag 3p, got %v", snap.Metadata["gemini_model_tag"])
 	}
 }

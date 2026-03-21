@@ -21,14 +21,14 @@
 Standalone `aubar once` / `aubar show` output looks like:
 
 ```text
-❆ 98% 94%  ✽ 82% 85%   3-78% 3-100% | 20:15:00
+❆ 98% 94%  ✽ 82% 85%   3.1p-78% | 20:15:00
 ```
 
 `status.txt` contains the same provider layout without the trailing timestamp, so it matches the visible Aubar segment in tmux without extra `sed` rewriting.
 
 - `❆`: OpenAI / Codex. First number is 5-hour remaining, second is 7-day remaining.
 - `✽`: Claude. Same two-window remaining layout when quota is available.
-- ``: Gemini. Left side is the selected Pro-chain model, right side is the selected Flash / Flash-lite chain model, both rendered as `<major>-<remaining%>`.
+- ``: Gemini. Displays the highest available model in the fallback chain (e.g., `3.1p`, `3f`, `2.5p`) and its remaining percentage.
 
 When `tmux.use_tmux_color_format` is enabled, Aubar writes tmux color tokens directly into `status.txt`:
 
@@ -106,7 +106,7 @@ aubar tmux
 - `aubar run` starts the updater in the background.
 - `aubar run --foreground --print` prints banner lines live in the current terminal.
 - `aubar once` collects once, prints a banner, and refreshes both cache files.
-- `aubar show` renders the latest cached banner with its stored timestamp.
+- `aubar show` collects once progressively and prints a live banner with its stored timestamp.
 - `aubar status` reports updater state plus the configured cache file freshness.
 - `aubar doctor` runs environment and provider diagnostics.
 - `aubar tmux` prints a starter tmux snippet for the default cache path.
@@ -251,14 +251,13 @@ CLAUDE_CAPTURED_QUOTA_PATH=/custom/path/captured_quota.json
 - The OAuth creds path can be overridden with `GEMINI_OAUTH_CREDS_PATH`.
 - OAuth refresh client config is loaded at runtime from `GEMINI_OAUTH_CLIENT_ID` and `GEMINI_OAUTH_CLIENT_SECRET`.
 - Aubar maps model buckets into two display chains:
-  - Pro chain: `gemini-3.1-pro -> gemini-3-pro -> gemini-2.5-pro -> gemini-1.5-pro`
-  - Flash chain: `gemini-3.1-flash -> gemini-3.1-flash-lite -> gemini-3-flash -> gemini-3-flash-lite -> gemini-2.5-flash-lite -> gemini-2.5-flash -> gemini-1.5-flash`
+  - Unified chain: `gemini-3.1-pro -> gemini-3.1-flash -> gemini-3-pro -> gemini-3-flash -> gemini-2.5-pro -> gemini-2.5-flash -> gemini-1.5-pro -> gemini-1.5-flash`
 - Non-zero models are preferred over exhausted ones.
 - If every candidate in a chain is exhausted, Aubar still uses the first exhausted candidate so the banner remains stable.
 - The banner renders Gemini as:
 
 ```text
- 3-78% 3-100%
+ 3.1p-78%
 ```
 
 ### Disconnected / Degraded Rendering

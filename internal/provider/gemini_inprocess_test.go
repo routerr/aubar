@@ -39,7 +39,10 @@ func TestGeminiProviderFetchUsageUsesInProcessCollectorByDefault(t *testing.T) {
 		t.Fatalf("expected cli source, got %+v", snap)
 	}
 	if snap.RemainingPercent == nil || *snap.RemainingPercent != 68 {
-		t.Fatalf("expected 68 remaining percent, got %+v", snap)
+		t.Fatalf("expected 68 remaining percent (3.1Pro is first in chain), got %+v", snap)
+	}
+	if got, ok := snap.Metadata["gemini_model_tag"].(string); !ok || got != "3.1p" {
+		t.Fatalf("expected model tag 3.1p, got %v", snap.Metadata["gemini_model_tag"])
 	}
 }
 
