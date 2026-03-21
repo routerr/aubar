@@ -56,7 +56,7 @@ func TestOnceWritesCaches(t *testing.T) {
 	}
 }
 
-func TestShowUsesCachedSnapshot(t *testing.T) {
+func TestShowCollectsAndWritesCache(t *testing.T) {
 	dir := t.TempDir()
 	settingsPath := filepath.Join(dir, "settings.json")
 	jsonFile := filepath.Join(dir, "snapshot.json")
@@ -73,11 +73,6 @@ func TestShowUsesCachedSnapshot(t *testing.T) {
 		t.Fatalf("save settings: %v", err)
 	}
 
-	raw := `{"generated_at":"2026-03-08T01:00:00Z","snapshots":[{"provider":"openai","status":"ok","remaining_percent":70},{"provider":"claude","status":"degraded","reason":"n/a","source":"api","observed_at":"2026-03-08T01:00:00Z"}]}`
-	if err := os.WriteFile(jsonFile, []byte(raw), 0o600); err != nil {
-		t.Fatalf("write cache: %v", err)
-	}
-
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	a := &App{Stdout: stdout, Stderr: stderr}
@@ -85,8 +80,16 @@ func TestShowUsesCachedSnapshot(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("expected code 0, got %d stderr=%s", code, stderr.String())
 	}
-	if !strings.Contains(stdout.String(), "❆ 70%") || strings.Contains(stdout.String(), "#[fg=") {
+	// With no providers enabled, show should print a "no providers" message
+	// and also write the cache files.
+	if !strings.Contains(stdout.String(), "no providers") {
 		t.Fatalf("unexpected stdout: %q", stdout.String())
+	}
+	if _, err := os.Stat(statusFile); err != nil {
+		t.Fatalf("expected show to write status file: %v", err)
+	}
+	if _, err := os.Stat(jsonFile); err != nil {
+		t.Fatalf("expected show to write json cache file: %v", err)
 	}
 }
 

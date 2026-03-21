@@ -245,12 +245,12 @@ func (a *App) cmdShow(args []string) int {
 		fmt.Fprintf(a.Stderr, "load config: %v\n", err)
 		return 1
 	}
-	col, err := readCachedCollection(cfg)
-	if err != nil {
-		fmt.Fprintf(a.Stderr, "read cached data: %v\n", err)
-		return 1
-	}
+
+	col := collectOnce(cfg)
 	fmt.Fprintln(a.Stdout, render.RenderLine(col, false))
+	if wErr := writeCaches(cfg, col); wErr != nil {
+		fmt.Fprintf(a.Stderr, "cache write warning: %v\n", wErr)
+	}
 	return 0
 }
 
@@ -606,10 +606,41 @@ func (a *App) printDiagnostics(col domain.Collection) {
 }
 
 func (a *App) printTmuxSnippet() {
-	fmt.Fprintln(a.Stdout, "# tmux snippet for the default Aubar cache line")
-	fmt.Fprintln(a.Stdout, "set -g status-position top")
-	fmt.Fprintf(a.Stdout, "set -g status-right '#(cat %q 2>/dev/null || echo \"○ booting\")'\n", filepath.Join(config.DefaultCacheDir(), "status.txt"))
-	fmt.Fprintln(a.Stdout, "# start updater once per login shell: aubar run")
+	statusFile := filepath.Join(config.DefaultCacheDir(), "status.txt")
+	fmt.Fprintln(a.Stdout, `Aubar tmux integration
+======================
+
+1. Add the following to your ~/.tmux.conf:
+
+   # --- Aubar status bar ---
+   set -g status-interval 15`)
+	fmt.Fprintf(a.Stdout, "   set -g status-right '#(cat %q 2>/dev/null || echo \"○ booting\")'\n", statusFile)
+	fmt.Fprintln(a.Stdout, `
+   To append your own segments (clock, date, etc.) after the aubar output:`)
+	fmt.Fprintf(a.Stdout, "   set -g status-right '#(cat %q 2>/dev/null || echo \"○ booting\") #[fg=#89b4fa]%%H:%%M  #[fg=#cba6f7]%%d-%%b'\n", statusFile)
+	fmt.Fprintln(a.Stdout, `
+   Important: use SINGLE quotes around the status-right value so that the
+   inner double quotes and #[...] color tokens are passed to tmux literally.
+
+2. Start the background updater (runs every 30s by default):
+
+   aubar run
+
+   Or add this to your shell profile (~/.zshrc, ~/.bashrc, etc.):
+
+   # start aubar updater if not already running
+   command -v aubar >/dev/null 2>&1 && aubar run 2>/dev/null
+
+3. Reload tmux configuration:
+
+   tmux source-file ~/.tmux.conf
+
+4. Verify it works:
+
+   aubar once        # collect and print banner (also updates cache)
+   aubar show        # display latest cached banner (auto-refreshes if stale)
+   aubar status      # check if background updater is running`)
+	fmt.Fprintf(a.Stdout, "\nCache file: %s\n", statusFile)
 }
 
 func (a *App) spawnDetached(opts runOptions) error {
