@@ -126,6 +126,43 @@ func TestRenderLineWithoutTimestampOmitsClock(t *testing.T) {
 	}
 }
 
+func TestRenderLineWithoutTimestampMatchesTmuxStatusSpacing(t *testing.T) {
+	openAI := 71.0
+	other := 77.0
+	col := domain.Collection{
+		GeneratedAt: time.Date(2026, 3, 8, 3, 0, 0, 0, time.UTC),
+		Snapshots: []domain.ProviderSnapshot{
+			{Provider: domain.ProviderOpenAI, Status: domain.StatusOK, RemainingPercent: &openAI},
+			{Provider: "other", Status: domain.StatusOK, RemainingPercent: &other},
+		},
+	}
+
+	line := RenderLineWithoutTimestamp(col, false)
+	if strings.Contains(line, " | ") {
+		t.Fatalf("expected tmux-style spacing without pipe separators in %q", line)
+	}
+	if !strings.Contains(line, "❆ 71%   77%") {
+		t.Fatalf("expected double-space provider separator in %q", line)
+	}
+}
+
+func TestRenderLineKeepsClockSeparatedFromProviderBanner(t *testing.T) {
+	openAI := 71.0
+	other := 77.0
+	col := domain.Collection{
+		GeneratedAt: time.Date(2026, 3, 8, 3, 0, 0, 0, time.UTC),
+		Snapshots: []domain.ProviderSnapshot{
+			{Provider: domain.ProviderOpenAI, Status: domain.StatusOK, RemainingPercent: &openAI},
+			{Provider: "other", Status: domain.StatusOK, RemainingPercent: &other},
+		},
+	}
+
+	line := RenderLine(col, false)
+	if !strings.Contains(line, "❆ 71%   77% | 03:00:00") {
+		t.Fatalf("expected tmux-style provider spacing plus clock suffix in %q", line)
+	}
+}
+
 func TestRenderLineShowsCodexFiveHourWindowAlongsideActiveWindow(t *testing.T) {
 	p := 68.0
 	col := domain.Collection{

@@ -21,10 +21,10 @@
 Standalone `aubar once` / `aubar show` output looks like:
 
 ```text
-❆ 98% 94% | ✽ 82% 85% |  3-78% 3-100% | 20:15:00
+❆ 98% 94%  ✽ 82% 85%   3-78% 3-100% | 20:15:00
 ```
 
-`status.txt` contains the same provider layout without the trailing timestamp.
+`status.txt` contains the same provider layout without the trailing timestamp, so it matches the visible Aubar segment in tmux without extra `sed` rewriting.
 
 - `❆`: OpenAI / Codex. First number is 5-hour remaining, second is 7-day remaining.
 - `✽`: Claude. Same two-window remaining layout when quota is available.

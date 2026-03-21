@@ -44,10 +44,11 @@ func renderLine(col domain.Collection, tmuxColors bool, includeTimestamp bool) s
 	if len(parts) == 0 {
 		parts = append(parts, "○ waiting for data")
 	}
+	line := strings.Join(parts, "  ")
 	if includeTimestamp {
-		parts = append(parts, col.GeneratedAt.Format("15:04:05"))
+		return line + " | " + col.GeneratedAt.Format("15:04:05")
 	}
-	return strings.Join(parts, " | ")
+	return line
 }
 
 func renderProvider(s domain.ProviderSnapshot, tmuxColors bool) string {
