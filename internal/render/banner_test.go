@@ -18,12 +18,14 @@ func TestRenderLine(t *testing.T) {
 		},
 	}
 	line := RenderLine(col, false)
-	for _, needle := range []string{"❆ 74%", "✽ 0.10$ 0.08$"} {
-		if !strings.Contains(line, needle) {
-			t.Fatalf("missing %s in %q", needle, line)
-		}
+	if !strings.Contains(line, "❆ 74%") {
+		t.Fatalf("missing ❆ 74%% in %q", line)
 	}
-	for _, needle := range []string{"offline"} {
+	// Claude without quota should show only the icon, no USD cost
+	if !strings.Contains(line, "✽") {
+		t.Fatalf("missing ✽ icon in %q", line)
+	}
+	for _, needle := range []string{"offline", "0.10$", "0.08$"} {
 		if strings.Contains(line, needle) {
 			t.Fatalf("unexpected %s in %q", needle, line)
 		}
@@ -39,9 +41,13 @@ func TestRenderLineShowsUsageOnlyProvidersAsDisconnected(t *testing.T) {
 	}
 
 	line := RenderLineWithoutTimestamp(col, false)
-	for _, needle := range []string{"✽ 0.10$ 0.10$"} {
-		if !strings.Contains(line, needle) {
-			t.Fatalf("expected %s in %q", needle, line)
+	// Claude without quota should show only the icon (inactive), no USD cost
+	if !strings.Contains(line, "✽") {
+		t.Fatalf("expected ✽ icon in %q", line)
+	}
+	for _, needle := range []string{"0.10$", "usd"} {
+		if strings.Contains(line, needle) {
+			t.Fatalf("unexpected %s in %q", needle, line)
 		}
 	}
 	if strings.Contains(line, "waiting for data") {
@@ -77,12 +83,13 @@ func TestRenderLineMarksExperimentalSessionSources(t *testing.T) {
 		},
 	}
 	line := RenderLine(col, false)
-	for _, needle := range []string{"❆ 71%", "✽ 0.10$ 0.10$", geminiIcon} {
+	// Claude without quota shows only icon; Gemini disconnected shows icon
+	for _, needle := range []string{"❆ 71%", "✽", geminiIcon} {
 		if !strings.Contains(line, needle) {
 			t.Fatalf("expected %s in %q", needle, line)
 		}
 	}
-	for _, needle := range []string{"240tok", "[offline]"} {
+	for _, needle := range []string{"240tok", "[offline]", "0.10$"} {
 		if strings.Contains(line, needle) {
 			t.Fatalf("unexpected %s in %q", needle, line)
 		}

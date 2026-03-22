@@ -88,20 +88,14 @@ func providerSummary(s domain.ProviderSnapshot, tmuxColors bool) string {
 		}
 		return joinColoredPercents(parts, colors)
 	}
-	var text string
-	if s.Provider == domain.ProviderClaude {
-		text = claudeCostSummary(s)
-	} else if s.RemainingPercent != nil {
-		text = formatPercent(*s.RemainingPercent)
+	if s.RemainingPercent != nil {
+		text := formatPercent(*s.RemainingPercent)
 		if tmuxColors {
 			return colorizePercent(*s.RemainingPercent)
 		}
 		return text
 	}
-	if text != "" && tmuxColors {
-		return colorizeText(text, colorText)
-	}
-	return text
+	return ""
 }
 
 func geminiSummary(s domain.ProviderSnapshot, tmuxColors bool) (string, bool) {
@@ -285,24 +279,7 @@ func formatPercent(v float64) string {
 	return fmt.Sprintf("%.0f%%", clamp(v, 0, 100))
 }
 
-func claudeCostSummary(s domain.ProviderSnapshot) string {
-	total, totalOK := metadataFloat(s.Metadata, "claude_total_cost_usd")
-	model, modelOK := metadataFloat(s.Metadata, "claude_model_cost_usd")
-	switch {
-	case totalOK && modelOK:
-		return fmt.Sprintf("%s %s", formatTrailingUSD(total), formatTrailingUSD(model))
-	case totalOK:
-		return fmt.Sprintf("%s %s", formatTrailingUSD(total), formatTrailingUSD(total))
-	case s.UsageUnit == "usd" && s.UsageValue > 0:
-		return fmt.Sprintf("%s %s", formatTrailingUSD(s.UsageValue), formatTrailingUSD(s.UsageValue))
-	default:
-		return ""
-	}
-}
 
-func formatTrailingUSD(v float64) string {
-	return fmt.Sprintf("%.2f$", v)
-}
 
 func shortWindowLabel(minutes int) string {
 	switch minutes {
